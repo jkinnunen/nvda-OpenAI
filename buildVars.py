@@ -35,13 +35,13 @@ addon_info = {
 	# Add-on summary, usually the user visible name of the addon.
 	# Translators: Summary for this add-on
 	# to be shown on installation and add-on information found in Add-ons Manager.
-	"addon_summary": "Open AI",
+	"addon_summary": "AI Hub",
 	# Add-on description
 	# Translators: Long description to be shown for this add-on on add-on information from add-ons manager
 	"addon_description": [
-		_("Open AI is an NVDA add-on designed to seamlessly integrate the capabilities of the Open AI API into your workflow. Whether you're looking to craft comprehensive text, translate passages with precision, concisely summarize documents, or even interpret and describe visual content, this add-on does it all with ease."),
+		_("AI Hub is an NVDA add-on that connects your screen reader to multiple AI providers for writing, summarizing, translation, image description, voice questions, and transcription without leaving NVDA."),
 		"\n",
-		_("The add-on also supports integration with Mistral and OpenRouter services, thanks to their shared API format.")
+		_("It supports OpenAI, Mistral, OpenRouter, Anthropic, xAI, Google, DeepSeek, Custom OpenAI-compatible endpoints, and local Ollama models, with provider-specific tools such as TTS, OCR, and speech-to-text.")
 	],
 	# version
 	"addon_version": time.strftime("%y.%m.%d"),
@@ -56,7 +56,7 @@ addon_info = {
 	# Minimum NVDA version supported (e.g. "2018.3.0", minor version is optional)
 	"addon_minimumNVDAVersion": "2023.1",
 	# Last NVDA version supported/tested (e.g. "2018.4.0", ideally more recent than minimum version)
-	"addon_lastTestedNVDAVersion": "2025.2",
+	"addon_lastTestedNVDAVersion": "2026.1",
 	# Add-on update channel (default is None, denoting stable releases,
 	# and for development releases, use "dev".)
 	# Do not change unless you know what you are doing!

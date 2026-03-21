@@ -7,6 +7,9 @@ import codecs
 import gettext
 import os
 import os.path
+import shutil
+import subprocess
+import tempfile
 import zipfile
 import sys
 
@@ -20,6 +23,131 @@ sys.dont_write_bytecode = True
 
 # Bytecode should not be written for build vars module to keep the repository root folder clean.
 import buildVars  # NOQA: E402
+
+
+def _extract_wheel_to_dir(wheel_path, destination):
+	if os.path.isdir(destination):
+		shutil.rmtree(destination)
+	os.makedirs(destination, exist_ok=True)
+	with zipfile.ZipFile(wheel_path, "r") as wheel_zip:
+		wheel_zip.extractall(destination)
+
+
+def _extract_single_file_from_wheel(wheel_path, member_name, destination_path):
+	with zipfile.ZipFile(wheel_path, "r") as wheel_zip:
+		wheel_members = wheel_zip.namelist()
+		if member_name not in wheel_members:
+			raise RuntimeError(f"{member_name} not found in wheel {os.path.basename(wheel_path)}")
+		with wheel_zip.open(member_name) as src, open(destination_path, "wb") as dest:
+			dest.write(src.read())
+
+
+def _ensure_pillow_libs():
+	"""Download prebuilt Pillow wheels into addon/globalPlugins/AIHub/libs when missing."""
+	libs_base = os.path.join("addon", "globalPlugins", "AIHub", "libs")
+	pillow_version = "12.1.1"
+	required_layouts = (
+		{
+			"folder": os.path.join(libs_base, "lib_py3.11_win32"),
+			"platform": "win32",
+			"python_version": "3.11",
+			"abi": "cp311",
+		},
+		{
+			"folder": os.path.join(libs_base, "lib_py3.13"),
+			"platform": "win_amd64",
+			"python_version": "3.13",
+			"abi": "cp313",
+		},
+	)
+	missing = [entry for entry in required_layouts if not os.path.isdir(entry["folder"])]
+	if not missing:
+		return
+	print("Some vendored libs are missing. Downloading pinned Pillow wheels...")
+	with tempfile.TemporaryDirectory(prefix="nvda-openai-libs-") as wheel_dir:
+		for entry in missing:
+			print(f"Preparing {entry['folder']}")
+			download_cmd = [
+				sys.executable,
+				"-m",
+				"pip",
+				"download",
+				f"pillow=={pillow_version}",
+				"--dest",
+				wheel_dir,
+				"--only-binary",
+				":all:",
+				"--implementation",
+				"cp",
+				"--python-version",
+				entry["python_version"],
+				"--abi",
+				entry["abi"],
+				"--platform",
+				entry["platform"],
+			]
+			try:
+				subprocess.run(download_cmd, check=True)
+			except subprocess.CalledProcessError as err:
+				raise RuntimeError(
+					f"Could not download Pillow {pillow_version} for {entry['folder']} "
+					f"(platform={entry['platform']}, python={entry['python_version']})."
+				) from err
+			wheel_name = f"pillow-{pillow_version}-{entry['abi']}-{entry['abi']}-{entry['platform']}.whl"
+			wheel_path = os.path.join(wheel_dir, wheel_name)
+			if not os.path.isfile(wheel_path):
+				raise RuntimeError(
+					f"Downloaded wheel not found: {wheel_name}. "
+					"Check pip output and wheel naming constraints."
+				)
+			_extract_wheel_to_dir(wheel_path, entry["folder"])
+
+
+def _ensure_markdown2_lib():
+	"""Download markdown2.py into addon/globalPlugins/AIHub/libs when missing."""
+	libs_base = os.path.join("addon", "globalPlugins", "AIHub", "libs")
+	markdown2_module = os.path.join(libs_base, "markdown2.py")
+	if os.path.isfile(markdown2_module):
+		return
+	os.makedirs(libs_base, exist_ok=True)
+	# Prefer latest tested version first, then fall back for older mirrors.
+	markdown2_versions = ("2.5.4", "2.5.3", "2.5.2", "2.5.1", "2.5.0", "2.4.13")
+	print("markdown2.py is missing. Downloading pinned markdown2 wheel...")
+	with tempfile.TemporaryDirectory(prefix="nvda-openai-markdown2-") as wheel_dir:
+		last_error = None
+		for markdown2_version in markdown2_versions:
+			download_cmd = [
+				sys.executable,
+				"-m",
+				"pip",
+				"download",
+				f"markdown2=={markdown2_version}",
+				"--dest",
+				wheel_dir,
+				"--only-binary",
+				":all:",
+			]
+			try:
+				subprocess.run(download_cmd, check=True)
+			except subprocess.CalledProcessError as err:
+				last_error = err
+				continue
+			wheel_name = f"markdown2-{markdown2_version}-py3-none-any.whl"
+			wheel_path = os.path.join(wheel_dir, wheel_name)
+			if not os.path.isfile(wheel_path):
+				last_error = RuntimeError(f"Downloaded wheel not found: {wheel_name}.")
+				continue
+			_extract_single_file_from_wheel(wheel_path, "markdown2.py", markdown2_module)
+			print(f"Using markdown2 {markdown2_version}")
+			return
+		raise RuntimeError(
+			f"Could not download markdown2 from pinned versions {markdown2_versions}. "
+			"Check network/index accessibility or adjust allowed versions."
+		) from last_error
+
+
+_ensure_markdown2_lib()
+_ensure_pillow_libs()
 
 
 def md2html(source, dest):

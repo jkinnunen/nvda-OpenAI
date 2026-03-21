@@ -1,0 +1,153 @@
+# coding: UTF-8
+"""Audio list handlers for AIHubDlg."""
+import os
+import wx
+
+import addonHandler
+from logHandler import log
+
+from .consts import stop_progress_sound
+from .history import TextSegment
+from .mediastore import persist_local_file
+
+addonHandler.initTranslation()
+
+
+class AudioHandlersMixin:
+	def persistAudioPath(self, path):
+		"""Persist temporary audio to add-on data folder."""
+		return persist_local_file(path, "audio", prefix="audio", fallback_ext=".wav")
+
+	def _playBlockAudio(self, path: str):
+		if not path or not os.path.exists(path):
+			return
+		self._audioPlayingPath = path
+		try:
+			os.startfile(path)
+			self.message(_("Playing audio"))
+		except Exception as e:
+			log.error(f"Failed to play audio: {e}", exc_info=True)
+			self._audioPlayingPath = None
+			self.message(_("An error occurred. More information is in the NVDA log."))
+
+	def _stopBlockAudio(self):
+		stop_progress_sound()
+		self._audioPlayingPath = None
+		self.message(_("Audio stopped"))
+
+	def onAudioPlayPause(self, evt):
+		segment = TextSegment.getCurrentSegment(self.messagesTextCtrl)
+		if segment is None:
+			return
+		block = segment.owner
+		if segment != block.segmentResponseLabel and segment != block.segmentResponse:
+			return
+		path = getattr(block, "audioPath", None)
+		if not path or not os.path.exists(path):
+			self.message(_("No audio in this message"))
+			return
+		if self._audioPlayingPath == path:
+			self._stopBlockAudio()
+		else:
+			self._playBlockAudio(path)
+
+	def onAudioStop(self, evt):
+		self._stopBlockAudio()
+
+	def getDefaultAudioPrompt(self):
+		return _("Transcribe and describe the content of this audio.")
+
+	def ensureModelAudioSelected(self):
+		model = self.getCurrentModel()
+		if model and getattr(model, "audioInput", False):
+			return
+		audio_models = [m for m in self._models if getattr(m, "audioInput", False)]
+		if not audio_models:
+			return
+		self._selectModelById(audio_models[0].id)
+
+	def updateAudioList(self, focusPrompt=True):
+		self.audioListCtrl.DeleteAllItems()
+		if not self.audioPathList:
+			self.audioLabel.Hide()
+			self.audioListCtrl.Hide()
+			self.Layout()
+			if focusPrompt:
+				self.promptTextCtrl.SetFocus()
+			return
+		for path in self.audioPathList:
+			path_str = path if isinstance(path, str) else getattr(path, "path", str(path))
+			name = os.path.basename(path_str) if path_str else "?"
+			self.audioListCtrl.Append([name, path_str or ""])
+		self.audioListCtrl.SetItemState(0, wx.LIST_STATE_FOCUSED, wx.LIST_STATE_FOCUSED)
+		self.audioLabel.Show()
+		self.audioListCtrl.Show()
+		self.Layout()
+
+	def onAddAudioFromFile(self, evt):
+		dlg = wx.FileDialog(
+			None,
+			message=_("Select audio files"),
+			defaultFile="",
+			wildcard=_("Audio files (*.mp3;*.mp4;*.mpeg;*.mpga;*.m4a;*.wav;*.webm)|*.mp3;*.mp4;*.mpeg;*.mpga;*.m4a;*.wav;*.webm"),
+			style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE
+		)
+		if dlg.ShowModal() != wx.ID_OK:
+			return
+		paths = dlg.GetPaths()
+		if not paths:
+			return
+		if not self.audioPathList:
+			self.audioPathList = []
+		for path in paths:
+			stored = self.persistAudioPath(path)
+			if stored not in self.audioPathList:
+				self.audioPathList.append(stored)
+		self.ensureModelAudioSelected()
+		if not self.promptTextCtrl.GetValue().strip():
+			self.promptTextCtrl.SetValue(self.getDefaultAudioPrompt())
+		self.updateAudioList()
+		self.message(_("Audio file(s) added. Enter your prompt and submit."))
+
+	def onAudioListContextMenu(self, evt):
+		menu = wx.Menu()
+		if self.audioPathList:
+			if self.audioListCtrl.GetItemCount() > 0 and self.audioListCtrl.GetSelectedItemCount() > 0:
+				item_id = wx.NewIdRef()
+				menu.Append(item_id, _("&Remove selected") + " (Del)")
+				self.Bind(wx.EVT_MENU, self.onRemoveSelectedAudio, id=item_id)
+			item_id = wx.NewIdRef()
+			menu.Append(item_id, _("Remove &all"))
+			self.Bind(wx.EVT_MENU, self.onRemoveAllAudio, id=item_id)
+			menu.AppendSeparator()
+		item_id = wx.NewIdRef()
+		menu.Append(item_id, _("Add from &file path..."))
+		self.Bind(wx.EVT_MENU, self.onAddAudioFromFile, id=item_id)
+		self.PopupMenu(menu)
+		menu.Destroy()
+
+	def onAudioListKeyDown(self, evt):
+		if evt.GetKeyCode() == wx.WXK_DELETE and self.audioPathList:
+			self.onRemoveSelectedAudio(evt)
+		else:
+			evt.Skip()
+
+	def onRemoveSelectedAudio(self, evt):
+		if not self.audioPathList:
+			return
+		items_to_remove = []
+		selected = self.audioListCtrl.GetFirstSelected()
+		while selected != wx.NOT_FOUND:
+			items_to_remove.append(selected)
+			selected = self.audioListCtrl.GetNextSelected(selected)
+		if not items_to_remove:
+			return
+		self.audioPathList = [
+			p for i, p in enumerate(self.audioPathList)
+			if i not in items_to_remove
+		]
+		self.updateAudioList()
+
+	def onRemoveAllAudio(self, evt):
+		self.audioPathList.clear()
+		self.updateAudioList()

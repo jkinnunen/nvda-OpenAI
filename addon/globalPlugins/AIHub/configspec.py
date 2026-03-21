@@ -11,24 +11,28 @@ from .consts import (
 	TTS_MODELS,
 	TTS_DEFAULT_MODEL,
 	TTS_VOICES,
-	TTS_DEFAULT_VOICE
+	TTS_DEFAULT_VOICE,
+	WHISPER_MODELS,
+	VOXTRAL_MODELS,
+	TRANSCRIPTION_PROVIDERS,
+	DEFAULT_TRANSCRIPTION_PROVIDER,
+	REASONING_EFFORT_OPTIONS,
+	DEFAULT_REASONING_EFFORT,
 )
 
 confSpecs = {
-	"update": {
-		"check": "boolean(default=True)",
-		"channel": "string(default='stable')"
-	},
-	"model": f"string(default={DEFAULT_MODEL.name})",
+	"model": f"string(default={DEFAULT_MODEL})",
 	"modelVision": f"string(default={DEFAULT_MODEL_VISION})",
 	"topP": f"integer(min={TOP_P_MIN}, max={TOP_P_MAX}, default={DEFAULT_TOP_P})",
 	"n": f"integer(min={N_MIN}, max={N_MAX}, default={DEFAULT_N})",
 	"stream": "boolean(default=True)",
+	"reasoningEffort": f"option({', '.join(REASONING_EFFORT_OPTIONS)}, default={DEFAULT_REASONING_EFFORT})",
+	"adaptiveThinking": "boolean(default=True)",
 	"TTSModel": f"option({', '.join(TTS_MODELS)}, default={TTS_DEFAULT_MODEL})",
 	"TTSVoice": f"option({', '.join(TTS_VOICES)}, default={TTS_DEFAULT_VOICE})",
 	"blockEscapeKey": "boolean(default=False)",
-	"conversationMode": "boolean(default=True)",
 	"saveSystem": "boolean(default=true)",
+	"autoSaveConversation": "boolean(default=True)",
 	"advancedMode": "boolean(default=False)",
 	"images": {
 		"maxHeight": "integer(min=0, default=720)",
@@ -40,13 +44,20 @@ confSpecs = {
 		"customPromptText": 'string(default="")'
 	},
 	"audio": {
+		"transcriptionProvider": f"option({', '.join(TRANSCRIPTION_PROVIDERS)}, default='{DEFAULT_TRANSCRIPTION_PROVIDER}')",
+		"whisperModel": f"string(default={WHISPER_MODELS[0]})",
+		"voxtralModel": f"string(default={VOXTRAL_MODELS[0]})",
+		"openaiTranscriptionAccountId": 'string(default="")',
+		"mistralTranscriptionAccountId": 'string(default="")',
 		"whisper.cpp": {
 			"enabled": "boolean(default=False)",
 			"host": "string(default='http://127.0.0.1:8081')"
 		},
 		"sampleRate": "integer(min=8000, max=48000, default=16000)",
 		"channels": "integer(min=1, max=2, default=1)",
-		"dtype": "string(default=int16)"
+		"dtype": "string(default=int16)",
+		"trimSilence": "boolean(default=True)",
+		"minSilenceSec": "integer(min=1, max=10, default=2)"
 	},
 	"chatFeedback": {
 		"sndResponsePending": "boolean(default=True)",
@@ -58,6 +69,36 @@ confSpecs = {
 	},
 	"renewClient": "boolean(default=False)",
 	"debug": "boolean(default=False)",
-	"futureMessage": "boolean(default=False)",
 }
+
+
+def _copy_missing(dst, src):
+	try:
+		items = list(src.items())
+	except Exception:
+		return
+	for key, value in items:
+		if key not in dst:
+			dst[key] = value
+			continue
+		try:
+			dst_child = dst.get(key)
+		except Exception:
+			dst_child = None
+		if hasattr(dst_child, "items") and hasattr(value, "items"):
+			_copy_missing(dst_child, value)
+
+
+def _migrate_config_section_if_needed():
+	legacy = config.conf.get("OpenAI")
+	new = config.conf.get("AIHub")
+	if new is None:
+		config.conf["AIHub"] = {}
+		new = config.conf["AIHub"]
+	if hasattr(legacy, "items"):
+		_copy_missing(new, legacy)
+
+
+config.conf.spec["AIHub"] = confSpecs
 config.conf.spec["OpenAI"] = confSpecs
+_migrate_config_section_if_needed()

@@ -1,6 +1,7 @@
+__pycache__
 addon/doc/*.css
 addon/doc/en/
-addon/globalPlugins/openai/lib/
+addon/globalPlugins/AIHub/libs/
 *_docHandler.py
 *.html
 manifest.ini
