@@ -438,6 +438,16 @@ class HistoryHandlersMixin:
 
 	def onWebviewMessage(self, evt, isHtml=False):
 		import markdown2
+		extras = [
+			"footnotes",
+			"header-ids",
+			"spoiler",
+			"strike",
+			"tables",
+			"task_list",
+			"underline",
+			"wiki-tables",
+		]
 		segment, block = self._getCurrentSegmentBlock()
 		if segment is None:
 			return
@@ -450,11 +460,9 @@ class HistoryHandlersMixin:
 			log.error(f"onWebviewMessage: {e}", exc_info=True)
 			self.message(_("An error occurred. More information is in the NVDA log."))
 			return
+		html = markdown2.markdown(text, extras=extras)
 		ui.browseableMessage(
-			markdown2.markdown(
-				text,
-				extras=["fenced-code-blocks", "footnotes", "header-ids", "spoiler", "strike", "tables", "task_list", "underline", "wiki-tables"]
-			),
+			html,
 			title="OpenAI",
 			isHtml=isHtml
 		)

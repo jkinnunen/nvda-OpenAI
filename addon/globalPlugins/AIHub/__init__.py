@@ -93,3 +93,21 @@ class GlobalPlugin(MenuMixin, DialogSessionMixin, AskRecordingMixin, globalPlugi
 	)
 	def script_recognizeObject(self, gesture):
 		return DialogSessionMixin.script_recognizeObject(self, gesture)
+
+	@script(
+		description=_("Manage saved conversations")
+	)
+	def script_showConversationsManager(self, gesture):
+		return MenuMixin.script_showConversationsManager(self, gesture)
+
+	@script(
+		description=_("Ask a question via voice: record, send to AI, and play the response")
+	)
+	def script_askQuestion(self, gesture):
+		return AskRecordingMixin.script_askQuestion(self, gesture)
+
+	@script(
+		description=_("Toggle the microphone recording and transcribe the audio from anywhere")
+	)
+	def script_toggleRecording(self, gesture):
+		return AskRecordingMixin.script_toggleRecording(self, gesture)
