@@ -1,182 +1,183 @@
+Ek iş akışları sunan ayrı bir masaüstü deneyimi arıyorsanız [BasiliskLLM](https://github.com/SigmaNight/basiliskLLM/) projesine bakabilirsiniz (bağımsız uygulama ve minimal NVDA eklentisi). AI Hub, NVDA içinde tam özellikli bir seçenek olarak kalmaya devam eder.
+
 # AI Hub
 
-Daha fazla ek iş akisi sunan ayri bir masaustu deneyimi isterseniz [BasiliskLLM](https://github.com/SigmaNight/basiliskLLM/) projesine bakin (bagimsiz uygulama + minimal NVDA eklentisi). AI Hub ise NVDA icinde tam ozellikli bir secenektir.
+**AI Hub**, ekran okuyucunuzu birden fazla büyük dil modeli (LLM) API’sine bağlayan bir NVDA eklentisidir. NVDA’dan çıkmadan yazma, özetleme, çeviri desteği, görsel işlemler (görseller ve ekran görüntüleri), sesli soru sorma, transkripsiyon ve isteğe bağlı araç iletişim kutuları (TTS, OCR ve ötesi) için kullanabilirsiniz.
 
-**AI Hub**, ekran okuyucunuzu birden cok buyuk dil modeli (LLM) API'sine baglayan bir NVDA eklentisidir. Yazma, ozetleme, ceviri yardimi, goruntu betimleme (resimler ve ekran goruntuleri), sesli soru, transkripsiyon ve istege bagli araclar (TTS, OCR vb.) icin NVDA'dan cikmadan kullanabilirsiniz.
+Eklentinin NVDA’daki **paket adı**, mevcut kurulumlarla uyumluluk için hâlâ `openai` olarak kalır. Menü ve ayarlarda gördüğünüz **görünen ad** ise **AI Hub**’dır.
 
-NVDA icindeki **paket adi** hala `openai`'dir (mevcut kurulumlarla uyumluluk icin). Menu ve ayarlarda gordugunuz **gosterim adi** ise **AI Hub**'dir.
+## Bir bakışta özellikler
 
-## Ozellikler
+- Geçmiş, sistem istemi ve model/hesap seçimi sunan özel ana iletişim kutusunda **sohbet**.
+- Dosyalardan **görsel ve belge** ekleme; **seçilen sağlayıcıya** uygun tür denetimleriyle uzak dosyalar için **URL** kullanma.
+- İstem alanında **akıllı yapıştırma**: panodan dosya yapıştırma, metinden yol veya tek bir URL (istemin bağlam menüsünden de erişilebilir). Odak istem alanındayken `Ctrl+V` aynı mantıkla çalışır.
+- Yeniden adlandırma, silme ve yeniden açma özellikleriyle **konuşma kaydı ve geçmişi**.
+- Her yerden **soru sor** (varsayılan kısayol yok): **Girdi Hareketleri → AI Hub** altından bir hareket atayarak kayıt alma, gönderme ve yanıtı dinleme veya okuma.
+- **Genel betimleme**: ekran görüntüsü (`NVDA+E`) veya gezgin nesnesi bölgesi (`NVDA+O`) bir sohbet oturumuna gönderilir.
+- **Tools** alt menüsü (NVDA → AI Hub altında): TTS, OCR, konuşmayı metne çevirme, Lyria ses ve Ollama model yönetimi gibi sağlayıcıya özel yardımcılar.
+- **Akıl yürütme / web araması** seçenekleri yalnızca **geçerli model** bunları desteklediğinde görünür (sağlayıcıya göre değişir).
 
-- Sistem istemi, gecmis ve model/hesap secimi olan ayri bir ana pencerede **sohbet**.
-- Dosyadan **gorsel ve belge** ekleri; secili saglayiciya uygun tur denetimiyle uzak dosya **URL** ekleme.
-- Istem alaninda **akilli yapistirma**: panodan dosya, metinden yol veya tek URL (baglam menusu ile de). Odak istem alanindayken `Ctrl+V` ayni mantigi kullanir.
-- **Konusma gecmisi**: kaydetme, yeniden adlandirma, silme ve tekrar acma.
-- Her yerden **soru sor** ozelligi (varsayilan kisayol yok): **Girdi Hareketleri -> AI Hub** altindan hareket atayarak kaydetme, gonderme ve yaniti dinleme/okuma.
-- **Global betimleme**: ekran goruntusu (`NVDA+E`) veya gezgin nesnesi bolgesi (`NVDA+O`) bir sohbet oturumuna gonderilir.
-- **Araclar** alt menusu (NVDA -> AI Hub): saglayiciya ozel TTS, OCR, speech-to-text, Lyria audio ve Ollama model yonetimi gibi araclar.
-- **Reasoning / web search** secenekleri yalnizca secili model destekliyorsa gorunur.
+Bu eklentinin kendi güncelleme denetleyicisi **yoktur**. Eklentiyi **NVDA’nın resmî Eklenti Mağazası**’ndan kurduysanız **güncellemeler** oradan yönetilir. [Sürümler sayfasından](https://github.com/aaclause/nvda-OpenAI/releases) elle kuruyorsanız, yeni `.nvda-addon` paketlerini aynı yolla yükleyin.
 
-Bu eklentide dahili guncelleme denetleyicisi **yoktur**. **Guncellemeler**, eger eklentiyi oradan kurduysaniz, **resmi NVDA Eklenti Magazasi** uzerinden gelir. Elle kurulum yapiyorsaniz [surumler sayfasi](https://github.com/aaclause/nvda-OpenAI/releases) uzerinden yeni `.nvda-addon` paketlerini ayni sekilde yukleyin.
+## Desteklenen sağlayıcılar
 
-## Desteklenen saglayicilar
+NVDA’da **Tercihler → Ayarlar → AI Hub** bölümünden **bir veya daha fazla sağlayıcı** yapılandırın. Her sağlayıcı, **birden fazla adlandırılmış hesap** (API anahtarları; gerektiğinde isteğe bağlı kuruluş veya temel URL) tutabilir.
 
-NVDA'da **Tercihler -> Ayarlar -> AI Hub** altindan bir veya daha fazla saglayici ayarlayabilirsiniz. Her saglayici icin birden cok adlandirilmis hesap (API anahtari, gerekirse organization/base URL) eklenebilir.
-
-| Saglayici | Rol |
+| Sağlayıcı | Rol |
 |----------|------|
-| [OpenAI](https://platform.openai.com/) | GPT ve ilgili modeller; resmi transkripsiyon ve TTS pencereleri |
+| [OpenAI](https://platform.openai.com/) | GPT ve ilgili modeller; resmî transkripsiyon ve TTS araç iletişim kutuları |
 | [DeepSeek](https://www.deepseek.com/) | DeepSeek API (OpenAI uyumlu) |
-| **Custom OpenAI** | OpenAI uyumlu herhangi bir HTTP API (ozel base URL + anahtar) |
-| **Ollama** | OpenAI uyumlu endpoint ile yerel modeller; model yoneticisi araci |
-| [Mistral AI](https://mistral.ai/) | Mistral / Pixtral; Voxtral TTS, OCR ve speech-to-text araclari |
-| [OpenRouter](https://openrouter.ai/) | Tek anahtarla cok sayida ucuncu taraf modele erisim |
+| **Custom OpenAI** | OpenAI uyumlu herhangi bir HTTP API (özel temel URL + anahtar) |
+| **Ollama** | OpenAI uyumlu uç nokta üzerinden yerel modeller; model yöneticisi aracı |
+| [Mistral AI](https://mistral.ai/) | Mistral / Pixtral; Voxtral TTS, OCR ve konuşmayı metne çevirme araçları |
+| [OpenRouter](https://openrouter.ai/) | Tek anahtar arkasında çok sayıda üçüncü taraf model |
 | [Anthropic](https://www.anthropic.com/) | Claude |
 | [xAI](https://x.ai/) | Grok |
-| [Google](https://ai.google.dev/) | Gemini; Lyria 3 Pro araci |
+| [Google](https://ai.google.dev/) | Gemini; Lyria 3 Pro aracı |
 
-Eklenti, tanimliysa API anahtarlarini **ortam degiskenlerinden** de okuyabilir (ornegin `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`, `GEMINI_API_KEY` / `GOOGLE_API_KEY` vb.). Yine de hesap yonetimi icin ana yer ayarlar ekranidir.
+Tanımlandıklarında eklenti API anahtarlarını **ortam değişkenlerinden** okuyabilir (örneğin `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`, `GEMINI_API_KEY` / `GOOGLE_API_KEY` ve diğerleri). Hesapları yönetmek için asıl yer yine ayarlar arayüzüdür.
 
-### Konusmadan yaziya (transkripsiyon) altyapilari
+### Konuşmayı metne çevirme (transkripsiyon) altyapıları
 
-Ana akis icindeki mikrofon/dosya transkripsiyonu (ayri OpenAI transkripsiyon aracindan farkli olarak) icin **whisper_cpp** (yerel), **openai** (Whisper API) ve **mistral** secenekleri, AI Hub ayarlarindaki **Audio** bolumunde secilebilir.
+Ana akıştaki **mikrofon / dosya transkripsiyonu** için (OpenAI’nın ayrı transkripsiyon aracı dışında), AI Hub ayarlarındaki **Ses** bölümünden **whisper_cpp** (yerel), **openai** (Whisper API) ve **mistral** arasında seçim yapabilirsiniz.
 
 ## Kurulum
 
-1. [Eklenti surumleri sayfasini](https://github.com/aaclause/nvda-OpenAI/releases) acin.
-2. En guncel `.nvda-addon` paketini indirin.
-3. NVDA'da **Araclar -> Eklenti yonetimi** uzerinden kurun (veya dosyayi Gezginden acip onaylayin).
+1. [Eklenti sürümleri sayfasını](https://github.com/aaclause/nvda-OpenAI/releases) açın.
+2. En son `.nvda-addon` paketini indirin.
 
-## Ilk kurulum
+## İlk yapılandırma
 
-1. **NVDA -> Tercihler -> Ayarlar** yolunu acin.
-2. **AI Hub** kategorisini secin.
-3. **API keys** altinda saglayici dugmelerini kullanarak (ornegin **OpenAI API keys...**) en az bir hesap ekleyin: gorunen ad, API anahtari ve saglayiciya gore opsiyonel alanlar.
-4. Gerekirse **Audio**, **Chat feedback**, **Advanced** / temperature ve **Auto-save conversation** ayarlarini duzenleyin (varsayilan acik).
+1. **NVDA → Tercihler → Ayarlar**’ı açın.
+2. **AI Hub** kategorisini seçin.
+3. **API Accounts** bölümünde **Add account...** seçeneğini kullanın.
+4. Hesap iletişim kutusunda bir sağlayıcı seçin, hesap adı girin ve gerekli alanları doldurun (çoğu sağlayıcı için API anahtarı; **Custom OpenAI** ve **Ollama** için base URL, Ollama alan boşsa varsayılan olarak yerel http://127.0.0.1:11434/v1 adresini kullanır).
+5. Kaydedin; ardından isteğe bağlı olarak daha fazla hesap ekleyebilir, mevcut hesapları düzenleyebilir veya kullanılmayan hesapları listeden kaldırabilirsiniz.
+6. İsteğe bağlı olarak **Audio**, **Chat feedback**, **Advanced** / sıcaklık ve **Auto-save conversation** ayarlarını düzenleyin (varsayılan olarak açıktır).
 
-En az bir kullanilabilir saglayici hesabi olana kadar ana pencere acildiginda AI Hub ayarlarina yonlendirme yapilir.
+En az bir sağlayıcı hesabı hazır olmadan ana iletişim kutusunu açtığınızda, AI Hub ayarlarına anahtar eklemeniz istenir.
 
-## Eski "Open AI" surumlerinden gecis
+## Eski "Open AI" sürümlerinden yükseltme
 
-Eski bir surum kullandiysaniz:
+Bu eklentinin daha eski bir sürümünü kullandıysanız:
 
-- **Ayarlar**, eski **`OpenAI`** bolumunden **`AIHub`** bolumune tasinir.
-- **Veriler** (konusmalar, hesap dosyalari, ekler) NVDA kullanici yapilandirmasi altindaki **`openai`** klasorunden **`aihub`** klasorune tasinir.
+- **Ayarlar**, eski **`OpenAI`** yapılandırma bölümünden **`AIHub`** bölümüne taşınır; tercihlerinizi kaybetmemeniz gerekir.
+- **Veri dosyaları** (konuşmalar, anahtar deposu, ekler), NVDA kullanıcı yapılandırma dizininizdeki **`openai`** klasöründen **`aihub`** klasörüne taşınır.
 
-Normalde dosyalari elle tasimaniz gerekmez.
+Özel bir kurulum kullanmıyorsanız dosyaları elle taşımanız gerekmez.
 
-## NVDA menusu: AI Hub
+## NVDA menüsü: AI Hub
 
-NVDA menusunde surum bilgisiyle birlikte **AI Hub** gorunur. Baslica girdiler:
+NVDA menüsünde **AI Hub**’ı (etikette kurulu sürümle birlikte) bulursunuz. Menü öğeleri şunlardır:
 
-- **Documentation** — kullanim kilavuzunu tarayicida acar (`doc\en\readme.html`). Dagitilan paketlerde bu dosya bulunmalidir; elle duzenlenmez, build surecinde `readme.md` dosyasindan uretilir.
-- **Main dialog...** — sohbet penceresini acar (`NVDA+G` varsayilan).
-- **Conversation history...** — kayitli sohbetleri yonetir.
-- **Tools** — **OpenAI**, **Mistral**, **Google** ve **Ollama** araclarini gruplandirir.
-- **API keys** / **API usage** / **GitHub repository** / **BasiliskLLM** — hizli baglantilar.
+- **Documentation** — kullanıcı kılavuzunu tarayıcıda açar (`doc\en\readme.html`).
+- **Main dialog…** — sohbet penceresini açar (varsayılan `NVDA+G`).
+- **Conversation history…** — kayıtlı sohbetleri yönetir.
+- **Tools** — **OpenAI**, **Mistral**, **Google** ve **Ollama** yardımcılarını gruplayan alt menü (aşağıya bakın).
+- **GitHub repository** / **BasiliskLLM** - hızlı bağlantılar.
 
-## Ana pencere
+## Ana iletişim kutusu
 
-**`NVDA+G`** veya AI Hub menusu altindaki **Main dialog...** ile acilir.
+**`NVDA+G`** veya menüden **Main dialog…** ile açın.
 
-### Neler yapabilirsiniz
+### Yapabilecekleriniz
 
-- Secili modelle sohbet edin; **Messages** alaninda klavye ve baglam menuleriyle gezin (ornegin odak mesaj alanindayken **j** / **k**).
-- **Yerel gorsel ve belgeleri** ekleyin, destekleniyorsa **dosya URL** ekleri kullanin.
-- Istem baglam menusundeki **Paste (file or text)** veya **`Ctrl+V`** ile dosya ekleme/yol metni ekleme/tek URL'yi ek olarak algilama.
-- **Ses kaydi** yapin, ses dosyasi ekleyin, model destekliyorsa istem metni icin **TTS** kullanin.
-- **`Escape`** ana pencereyi kapatir (engelleyici modal acik degilse).
-- **`Ctrl+R`** mikrofon kaydini baslatir/durdurur.
-- **`F2`** mevcut kayitli konusmayi yeniden adlandirir.
-- **`Ctrl+N`** yeni bir sohbet oturumu acar.
+- Seçilen modelle sohbet edin; **Messages** alanında klavye ile gezinin ve bağlam menülerini kullanın (ör. odak mesaj alanındayken iletiler arasında **j** / **k** — etkin alan için ekrandaki ipuçlarına bakın).
+- Sağlayıcı destekliyorsa **yerel görsel veya belge** ekleyin ve **dosya URL’leri** girin. Geçerli sağlayıcı için desteklenmeyen türler, göndermeden önce uyarılabilir.
+- İstemin bağlam menüsünden **Paste (file or text)** kullanın veya istemde **`Ctrl+V`**: eklenti uygun olduğunda dosya ekleyebilir, metin yolları ekleyebilir veya tek bir URL’yi ek olarak işleyebilir.
+- **Ses** kaydı alın, ses dosyası ekleyin ve model izin veriyorsa istem metni için **TTS** kullanın.
+- **`Escape`**, engelleyici bir iletişim kutusu açık değilken ana pencereyi kapatır.
+- **`Ctrl+R`**, uygunsa mikrofon kaydını açıp kapatır.
+- **`F2`**, depoda zaten varsa geçerli kayıtlı konuşmayı yeniden adlandırır.
+- **`Ctrl+N`**, yeni bir ana iletişim kutusu örneği (oturum) açar.
 
-### Modele bagli secenekler
+### Modele bağlı seçenekler
 
-Bazi kontroller yalnizca belirli modellerde gorunur:
+Bazı denetimler yalnızca belirli modellerde görünür veya geçerlidir:
 
-- **Reasoning** ("thinking") destegi olan modellerde.
-- Saglayici destekliyorsa **reasoning effort** seviyeleri.
-- Desteklenen modellerde **web search** secenegi.
+- Bunu sunan modeller için **Akıl yürütme** ("thinking"); API bu ayrımı verdiğinde akış hâlindeki akıl yürütme, görünür yanıttan ayrı tutulur.
+- Sağlayıcı düzeyleri destekliyorsa **Akıl yürütme çabası** ve ilgili denetimler.
+- Yalnızca web araması desteğini duyuran modellerde **Web araması**.
 
-Saglayicilar API'lerini guncelledikce kullanilabilirlik degisebilir; arayuz her zaman secili modele gore davranir.
+Sağlayıcılar API’lerini güncelledikçe kullanılabilirlik değişir; arayüz her zaman **o anda seçili modeli** yansıtır.
 
 ### Sistem istemi
 
-Sistem istemi model davranisini yonlendirir. Erisilebilirlik odakli varsayilan bir istem gelir; duzenleyebilir, baglam menusunden sifirlayabilir ve isterse son kullanilan istemi saklayabilirsiniz. Sistem istemi de token tuketir.
+Sistem istemi model davranışını yönlendirir. Erişilebilirlik yardımına uygun bir varsayılan vardır; düzenleyebilir, bağlam menüsünden sıfırlayabilir ve son kullandığınız istemi kalıcı tutmayı ayarlardan isteğe bağlı açabilirsiniz. Sistem istemi de diğer girdiler gibi token harcar.
 
-## Konusma gecmisi
+## Konuşma geçmişi
 
-AI Hub menusunden **Conversation history...** secenegini kullanin veya **Girdi Hareketleri -> AI Hub** altindan bir hareket atayin.
+AI Hub menüsünden **Conversation history…**’yi kullanın veya **Girdi Hareketleri → AI Hub** altından bir hareket atayın.
 
-Konusmalari listeleyebilir, acabilir, yeniden adlandirabilir, silebilir ve yeni konusma olusturabilirsiniz. Ana pencerede **F2** ve **Ctrl+N** yardimci olur.
+Konuşmaları listeleyebilir, açabilir, yeniden adlandırabilir, silebilir ve yeni konuşma oluşturabilirsiniz. Ana iletişim kutusunda **F2** ve **Ctrl+N**, geçerli oturumu yönetmeye yardımcı olur.
 
 ### Otomatik kaydetme
 
-**Auto-save conversation** aciksa (varsayilan), her tamamlanan asistan yanitindan sonra konusma kaydedilir/guncellenir. Pencere kapanirken de gerekli durumda durum saklanabilir. Isterseniz **Messages** alaninin baglam menusunden elle kaydedebilirsiniz.
+Ayarlarda **Konuşmayı otomatik kaydet** açıksa (varsayılan), eklenti depolanan konuşmayı **her tamamlanan asistan yanıtından sonra** kaydeder veya günceller; kaydedilecek bir şey varsa iletişim kutusunu kapatırken durumu da kalıcı hâle getirebilir. **Messages** alanının bağlam menüsünden de kaydedebilirsiniz. Otomatik kayıt kapalıysa, kalıcı tutmak istediğinizde elle kaydedin.
 
-## Soru sor (sesli)
+## Soru sor (ses)
 
-Bu komutun varsayilan hareketi **yoktur**. **Girdi Hareketleri -> AI Hub** altindan atayin.
+Bu komutun **varsayılan tuşu yoktur**. Bir tuş atamak için **Girdi Hareketleri → AI Hub**’a gidin.
 
-- Ilk basin: kaydi baslat.
-- Kayit sirasinda ikinci basin: durdur ve gonder.
-- Yanit sesli oynatiliyorsa tekrar basin: oynatmayi durdur.
+- İlk basış: kaydı başlatır.
+- Kayıt sürerken ikinci basış: durdurur ve gönderir.
+- Yanıt ses olarak çalıyorsa, tekrar basış oynatmayı durdurur.
 
 **Modlar:**
 
-- **Direct audio** — secili model ses girdisini destekliyorsa kayit dogrudan gonderilir.
-- **Transcribe then chat** — aksi halde kayit secili transkripsiyon altyapisiyla yaziya cevrilir, sonra modele gonderilir.
+- **Doğrudan ses** — seçili model ses girişini destekliyorsa kaydınız ayrı bir transkripsiyon adımı olmadan ses olarak gönderilebilir.
+- **Önce metne çevir, sonra sohbet et** — aksi hâlde yapılandırdığınız transkripsiyon altyapısı kaydı işler, ardından metin sohbet modeline gider.
 
-Ana pencere odaktaysa oradaki **mevcut model** kullanilir; degilse eklenti uygun bir modeli otomatik secer.
+Ana iletişim kutusu odaktaysa onun **geçerli modeli** kullanılır; değilse eklenti, yapılandırılmış sağlayıcılar arasından uygun bir model seçer.
 
-## Tools alt menusu
+## Araçlar alt menüsü
 
-**Tools** girdisi, saglayiciya gore gruplanmis arac pencerelerini acar (her biri ilgili saglayici hesabi gerektirebilir):
+AI Hub menüsündeki **Tools** öğesi, sağlayıcıya göre gruplanmış iletişim kutularını açar (her biri ilgili API hesabını gerektirebilir):
 
-| Menu alani | Arac |
+| Menü alanı | Araç |
 |-----------|------|
-| Mistral | **Voxtral TTS...**, **OCR...**, **Speech to Text...** |
-| Google | **Lyria 3 Pro...** |
-| OpenAI | **TTS...**, **Transcription / Translation...** |
-| Ollama | **Model manager...** |
+| Mistral | **Voxtral TTS…**, **OCR…**, **Speech to Text…** |
+| Google | **Lyria 3 Pro…** |
+| OpenAI | **TTS…**, **Transcription / Translation…** |
+| Ollama | **Model manager…** |
 
-Aracin saglayicisi icin hesap yoksa AI Hub ayarlarindan hesap eklemeniz istenir.
+Aracın sağlayıcısı için hesap tanımlı değilse eklenti, AI Hub ayarlarından hesap eklemenizi söyler.
 
-## Global komutlar
+## Genel komutlar
 
-Tum varsayilan kisayollar **NVDA -> Tercihler -> Girdi Hareketleri -> AI Hub** altindan degistirilebilir.
+Varsayılan tüm hareketler **NVDA → Tercihler → Girdi Hareketleri → AI Hub** altından değiştirilebilir.
 
-| Kisayol | Islem |
+| Hareket | Eylem |
 |---------|--------|
-| `NVDA+G` | AI Hub ana penceresini goster |
-| `NVDA+E` | Ekran goruntusu al ve betimle |
-| `NVDA+O` | Mevcut gezgin nesnesi bolgesini betimle |
-| *(varsayilan hareket yok)* | Konusma gecmisi |
-| *(varsayilan hareket yok)* | Soru sor (kayit / gonder / ses durdur) |
-| *(varsayilan hareket yok)* | Mikrofon kaydini ve transkripsiyonu ac/kapat |
+| `NVDA+G` | AI Hub ana iletişim kutusunu gösterir |
+| `NVDA+E` | Ekran görüntüsü alır ve betimler (oturuma görsel ekler) |
+| `NVDA+O` | Geçerli gezgin nesnesi bölgesini betimler |
+| *(varsayılan hareket yok)* | Konuşma geçmişi. Girdi Hareketleri → AI Hub altından atayın. |
+| *(varsayılan hareket yok)* | Soru sor (kaydet / gönder / sesi durdur). Girdi Hareketleri → AI Hub altından atayın. |
+| *(varsayılan hareket yok)* | Mikrofon kaydı ve transkripsiyonu aç/kapat. Girdi Hareketleri → AI Hub altından atayın. |
 
-## Veriler nerede tutulur
+## Veriler nerede saklanır
 
-Calisma dosyalari, kayitli konusma indeksi, `accounts.json` ve ekler NVDA kullanici yapilandirmasindaki **`aihub`** klasorunde tutulur (`openai`'den tasinmis). Gecici dosyalar `tmp` altindadir ve uygun zamanlarda temizlenir.
+Çalışma dosyaları, kaydedilmiş konuşmalar indeksi, birleşik `accounts.json` ve ekler; `openai`’den taşındıktan sonra NVDA **kullanıcı yapılandırması** dizininizdeki **`aihub`** klasöründedir. Geçici dosyalar `tmp` alt klasörünü kullanır; uygun olduğunda temizlenir (ör. eklenti kapanırken veya iletişim kutusu kapanırken).
 
-## Gerekli bagimliliklar (build sirasinda otomatik indirilir)
+## Gerekli bağımlılıklar (derleme sırasında otomatik alınır)
 
-Build islemi `scons` ile runtime kutuphanelerini su klasore yerlestirir:
+Derlemeler, çalışma zamanı kitaplıklarını şu konuma yerleştirmek için `scons` kullanır:
 
 `addon/globalPlugins/AIHub/libs/`
 
-Gerekli kutuphane eksikse `scons`, sabitlenmis wheel paketlerini indirir ve yalnizca gerekli icerigi buraya cikarir. Guncel sabitlenmis bagimliliklar:
+Gerekli bir kitaplık eksikse `scons`, sabitlenmiş wheel paketlerini indirir ve yalnızca gereken parçaları bu klasöre çıkarır. Güncel sabitlenmiş bağımlılıklar şunlardır:
 
-- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` — sohbet Markdown goruntulemesi icin `libs/markdown2.py`.
+- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` — sohbet Markdown işlemesi için `libs/markdown2.py` olarak çıkarılır.
 - **[Pillow](https://pypi.org/project/Pillow/)** `12.1.1`:
   - Python `3.11` `win32` -> `libs/lib_py3.11_win32/`
   - Python `3.13` `win_amd64` -> `libs/lib_py3.13/`
 
-`libs` klasoru bilincli olarak git'e dahil edilmez; katkilayanlarin bu artefaktlari commit etmesi gerekmez.
+`libs` dizini bilerek `.gitignore`’dadır; katkı verenlerin derlemeyle eklenen ikili dosyaları depoya eklemesi gerekmez.
 
-## Kisa sorun giderme
+## Sorun giderme (kısa)
 
-- **"No account configured"** — secili saglayici icin **AI Hub** ayarlarindan API anahtari ekleyin.
-- **Saglayici eki reddediyor** — dosya turu/boyutunu kontrol edin; gerekiyorsa farkli model veya saglayici deneyin.
+- **"No account configured"** — **AI Hub** ayarlarında, kullandığınız sağlayıcı için bir API anahtarı ekleyin.
+- **Sağlayıcı eki reddediyor** — dosya türünü ve boyutunu kontrol edin; ihtiyaç duyduğunuz ortamı destekleyen başka bir model veya sağlayıcı deneyin.
 
-Hata bildirimi ve katki icin AI Hub menusundeki **GitHub repository** baglantisini kullanin.
+Sorun bildirimi ve katkılar için AI Hub menüsündeki **GitHub repository** bağlantısını kullanın.

@@ -51,8 +51,10 @@ For **microphone / file transcription** inside the main flow (not the separate O
 
 1. Open **NVDA → Preferences → Settings**.
 2. Select the **AI Hub** category.
-3. Under **API keys**, use the buttons for each provider (e.g. **OpenAI API keys…**) to add at least one account: display name, API key, and optional fields (organization, base URL) depending on the provider.
-4. Optionally adjust **Audio**, **Chat feedback**, **Advanced** / temperature, and **Auto-save conversation** (enabled by default).
+3. In **API Accounts**, choose **Add account...**.
+4. In the account dialog, select a provider, enter an account name, and fill the required fields (API key for most providers; base URL for **Custom OpenAI** and **Ollama**, with Ollama defaulting to local `http://127.0.0.1:11434/v1` when empty).
+5. Save, then optionally add more accounts, edit existing ones, or remove unused ones from the accounts list.
+6. Optionally adjust **Audio**, **Chat feedback**, **Advanced** / temperature, and **Auto-save conversation** (enabled by default).
 
 Until at least one provider account is ready, opening the main dialog will prompt you to add keys in AI Hub settings.
 
@@ -69,11 +71,11 @@ You do not need to move files manually unless you use a custom setup.
 
 Under the NVDA menu you will find **AI Hub** (with the installed version in the label). Entries include:
 
-- **Documentation** — opens the user guide in your browser (`doc\en\readme.html`). **Shipped packages** should include that file; it is **not** edited by hand—generate it from this `readme.md` using your **markdown2html** (or equivalent) conversion step in the build or release pipeline.
+- **Documentation** — opens the user guide in your browser (`doc\en\readme.html`).
 - **Main dialog…** — open the chat window (`NVDA+G` by default).
 - **Conversation history…** — manage saved chats.
 - **Tools** — submenu grouping **OpenAI**, **Mistral**, **Google**, and **Ollama** utilities (see below).
-- **API keys** / **API usage** / **GitHub repository** / **BasiliskLLM** — quick links.
+- **GitHub repository** / **BasiliskLLM** — quick links.
 
 ## Main dialog
 
