@@ -181,8 +181,8 @@ class ModelHandlersMixin:
 			capabilities.append(_("web search"))
 		cap_str = ", ".join(capabilities)
 		ctx_k = model.contextWindow // 1000
-		prefix = "★ " if self._isModelFavorite(model) else ""
-		return f"{prefix}{model.name}  |  {cap_str}  |  {ctx_k}k"
+		suffix = " *" if self._isModelFavorite(model) else ""
+		return f"{model.name}{suffix}  |  {cap_str}  |  {ctx_k}k"
 
 	def _getDefaultSelection(self):
 		account = self.getCurrentAccount()
