@@ -830,20 +830,28 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 			return
 		if account["provider"] != model.provider:
 			gui.messageBox(
-				_("The selected account provider (%s) does not match the selected model provider (%s). Please select a compatible account or model.") % (
-					account["provider"],
-					model.provider
-				),
+				_(
+					"The selected account provider ({accountProvider}) does not match the selected model provider ({modelProvider}). "
+					"Please select a compatible account or model."
+				).format(**{
+					"accountProvider": account["provider"],
+					"modelProvider": model.provider,
+				}),
 				_("Provider mismatch"),
 				wx.OK | wx.ICON_ERROR
 			)
 			return
 		if not apikeymanager.get(model.provider).isReady(account_id=account["id"]):
 			gui.messageBox(
-				_("This model is only available with the %s provider and the selected account is not ready. Please verify your account API key in settings, or select another account/model.") % (
-					model.provider
-				),
-				_("No API key for %s") % model.provider,
+				_(
+					"This model is only available with the {provider} provider and the selected account is not ready. "
+					"Please verify your account API key in settings, or select another account/model."
+				).format(**{
+					"provider": model.provider,
+				}),
+				_("No API key for {provider}").format(**{
+					"provider": model.provider,
+				}),
 				wx.OK | wx.ICON_ERROR
 			)
 			return
@@ -860,10 +868,13 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 		if not model.vision and self.pathList:
 			visionModels = [m.id for m in self._models if m.vision]
 			gui.messageBox(
-				_("This model (%s) does not support image description. Please select one of the following models: %s.") % (
-					model.id,
-					", ".join(visionModels)
-				),
+				_(
+					"This model ({model}) does not support image description. "
+					"Please select one of the following models: {models}."
+				).format(**{
+					"model": model.id,
+					"models": ", ".join(visionModels),
+				}),
 				_("Invalid model"),
 				wx.OK | wx.ICON_ERROR
 			)
@@ -871,10 +882,13 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 		if self.audioPathList and not getattr(model, "audioInput", False):
 			audioModels = [m.id for m in self._models if getattr(m, "audioInput", False)]
 			gui.messageBox(
-				_("This model (%s) does not support audio input. Please select one of the following models: %s.") % (
-					model.id,
-					", ".join(audioModels) if audioModels else _("none available")
-				),
+				_(
+					"This model ({model}) does not support audio input. "
+					"Please select one of the following models: {models}."
+				).format(**{
+					"model": model.id,
+					"models": ", ".join(audioModels) if audioModels else _("none available"),
+				}),
 				_("Invalid model"),
 				wx.OK | wx.ICON_ERROR
 			)

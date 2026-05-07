@@ -185,7 +185,12 @@ class ConversationsManagerDlg(wx.Dialog):
 				path = item.get("path", "")
 				name = os.path.basename(path) if isinstance(path, str) and path else _("(no path)")
 				size = format_size(item.get("size"))
-				lines.append(_("- [%s] %s (%s, %s)") % (role, name, kind, size))
+				lines.append(_("- [{role}] {name} ({kind}, {size})").format(**{
+					"role": role,
+					"name": name,
+					"kind": kind,
+					"size": size,
+				}))
 		return lines
 
 	def _updatePropertiesPanel(self, entry):

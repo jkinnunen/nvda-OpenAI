@@ -498,7 +498,10 @@ class SettingsDlg(gui.settingsDialogs.SettingsPanel):
 		if not entry:
 			return
 		res = gui.messageBox(
-			_("Remove account %s from provider %s?") % (entry["name"], entry["provider"]),
+			_("Remove account {name} from provider {provider}?").format(**{
+				"name": entry["name"],
+				"provider": entry["provider"],
+			}),
 			_("Remove account"),
 			wx.YES_NO | wx.ICON_QUESTION
 		)

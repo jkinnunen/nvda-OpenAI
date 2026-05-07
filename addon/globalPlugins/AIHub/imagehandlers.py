@@ -168,8 +168,11 @@ class ImageHandlersMixin:
 			for path, ext, kind in unsupported
 		)
 		msg = _(
-			"The following attachments are not supported by %s and cannot be sent:\n%s"
-		) % (provider_name, details)
+			"The following attachments are not supported by {provider} and cannot be sent:\n{details}"
+		).format(**{
+			"provider": provider_name,
+			"details": details,
+		})
 		return False, msg
 
 	def addImageToList(self, path, removeAfter=False):

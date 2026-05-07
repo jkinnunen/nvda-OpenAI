@@ -249,7 +249,14 @@ class OpenAITranscriptionToolDialog(ToolDialogBase):
 		if err is not None:
 			if isinstance(err, (APIConnectionError, APIStatusError)):
 				action = _("translation") if task == "translation" else _("transcription")
-				wx.MessageBox(_("OpenAI %s failed: %s") % (action, err), "OpenAI", wx.OK | wx.ICON_ERROR)
+				wx.MessageBox(
+					_("OpenAI {action} failed: {error}").format(**{
+						"action": action,
+						"error": err,
+					}),
+					"OpenAI",
+					wx.OK | wx.ICON_ERROR,
+				)
 			else:
 				log.error(f"OpenAI audio text task failed: {err}", exc_info=True)
 				wx.MessageBox(_("OpenAI audio task failed. See NVDA log for details."), "OpenAI", wx.OK | wx.ICON_ERROR)
