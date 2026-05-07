@@ -168,7 +168,7 @@ Le build usano `scons` per popolare le librerie runtime in:
 
 Quando manca una libreria richiesta, `scons` scarica wheel con versione fissata ed estrae solo ciò che serve in quella cartella. Le dipendenze fissate attuali sono:
 
-- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` — estratto come `libs/markdown2.py` per il rendering Markdown della chat.
+- **[markdown-it-py](https://pypi.org/project/markdown-it-py/)** `3.0.0` + **[mdurl](https://pypi.org/project/mdurl/)** `0.1.2` — estratto in `libs/` per il rendering Markdown della chat.
 - **[Pillow](https://pypi.org/project/Pillow/)** `12.1.1` per:
   - Python `3.11` `win32` -> `libs/lib_py3.11_win32/`
   - Python `3.13` `win_amd64` -> `libs/lib_py3.13/`

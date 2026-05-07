@@ -168,7 +168,7 @@
 
 Если обязательной библиотеки нет, `scons` скачивает зафиксированные wheel-пакеты и извлекает только нужное в эту папку. Текущие зафиксированные зависимости:
 
-- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` — извлекается как `libs/markdown2.py` для рендеринга Markdown в чате.
+- **[markdown-it-py](https://pypi.org/project/markdown-it-py/)** `3.0.0` + **[mdurl](https://pypi.org/project/mdurl/)** `0.1.2` — извлекается в `libs/` для рендеринга Markdown в чате.
 - **[Pillow](https://pypi.org/project/Pillow/)** `12.1.1` для:
   - Python `3.11` `win32` -> `libs/lib_py3.11_win32/`
   - Python `3.13` `win_amd64` -> `libs/lib_py3.13/`

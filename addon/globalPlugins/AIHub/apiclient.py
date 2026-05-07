@@ -17,7 +17,9 @@ import urllib.request
 from io import BytesIO
 from typing import Any, BinaryIO, Generator, Optional
 
+from . import apikeymanager
 from .anthropicthinking import get_anthropic_thinking_profile, normalize_effort
+from .consts import BASE_URLs
 
 
 class APIError(Exception):
@@ -1531,8 +1533,6 @@ def truncate_error_for_user(err, max_len: int = 300) -> str:
 
 def configure_client_for_provider(client, provider: str, account_id: str = None, clone: bool = False):
 	"""Set client base_url, api_key, organization for provider/account and return configured client."""
-	from . import apikeymanager
-	from .consts import BASE_URLs
 	if clone and hasattr(client, "clone"):
 		client = client.clone()
 	manager = apikeymanager.get(provider)

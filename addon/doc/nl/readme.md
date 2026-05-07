@@ -168,7 +168,7 @@ Builds gebruiken `scons` om runtimebibliotheken te vullen onder:
 
 Wanneer een vereiste bibliotheek ontbreekt, downloadt `scons` vastgepinde wheels en pakt alleen uit wat nodig is in die map. De huidige vastgepinde afhankelijkheden zijn:
 
-- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` — uitgepakt als `libs/markdown2.py` voor Markdown-weergave in de chat.
+- **[markdown-it-py](https://pypi.org/project/markdown-it-py/)** `3.0.0` + **[mdurl](https://pypi.org/project/mdurl/)** `0.1.2` — uitgepakt in `libs/` voor Markdown-weergave in de chat.
 - **[Pillow](https://pypi.org/project/Pillow/)** `12.1.1` voor:
   - Python `3.11` `win32` -> `libs/lib_py3.11_win32/`
   - Python `3.13` `win_amd64` -> `libs/lib_py3.13/`

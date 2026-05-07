@@ -168,7 +168,7 @@ Build käyttää `scons`:ia ajonaikaisten kirjastojen täyttämiseen seuraavaan 
 
 Kun vaadittu kirjasto puuttuu, `scons` lataa kiinnitetyt wheel-paketit ja purkaa vain tarvittavat osat tähän kansioon. Nykyiset kiinnitetyt riippuvuudet ovat:
 
-- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` — puretaan tiedostoksi `libs/markdown2.py` keskustelun Markdown-renderöintiä varten.
+- **[markdown-it-py](https://pypi.org/project/markdown-it-py/)** `3.0.0` + **[mdurl](https://pypi.org/project/mdurl/)** `0.1.2` — puretaan kansioon `libs/` keskustelun Markdown-renderöintiä varten.
 - **[Pillow](https://pypi.org/project/Pillow/)** `12.1.1` seuraaville:
   - Python `3.11` `win32` -> `libs/lib_py3.11_win32/`
   - Python `3.13` `win_amd64` -> `libs/lib_py3.13/`

@@ -168,7 +168,7 @@ Builds verwenden `scons`, um Laufzeitbibliotheken unter folgendem Pfad bereitzus
 
 Wenn eine erforderliche Bibliothek fehlt, lädt `scons` angeheftete Wheels herunter und extrahiert nur das Nötige in diesen Ordner. Aktuell angeheftete Abhängigkeiten sind:
 
-- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` - extrahiert als `libs/markdown2.py` für das Markdown-Rendering im Chat.
+- **[markdown-it-py](https://pypi.org/project/markdown-it-py/)** `3.0.0` + **[mdurl](https://pypi.org/project/mdurl/)** `0.1.2` - extrahiert nach `libs/` für das Markdown-Rendering im Chat.
 - **[Pillow](https://pypi.org/project/Pillow/)** `12.1.1` für:
   - Python `3.11` `win32` -> `libs/lib_py3.11_win32/`
   - Python `3.13` `win_amd64` -> `libs/lib_py3.13/`

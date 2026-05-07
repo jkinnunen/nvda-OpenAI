@@ -168,7 +168,7 @@ Gradnje uporabljajo `scons` za zapolnitev izvajalnih knjižnic v:
 
 Ko zahtevana knjižnica manjka, `scons` prenese pripete wheel pakete in razširi le potrebne dele v to mapo. Trenutno pripete odvisnosti so:
 
-- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` — izvlečeno kot `libs/markdown2.py` za upodabljanje Markdowna v klepetu.
+- **[markdown-it-py](https://pypi.org/project/markdown-it-py/)** `3.0.0` + **[mdurl](https://pypi.org/project/mdurl/)** `0.1.2` — izvlečeno v `libs/` za upodabljanje Markdowna v klepetu.
 - **[Pillow](https://pypi.org/project/Pillow/)** `12.1.1` za:
   - Python `3.11` `win32` -> `libs/lib_py3.11_win32/`
   - Python `3.13` `win_amd64` -> `libs/lib_py3.13/`

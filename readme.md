@@ -169,7 +169,7 @@ Builds use `scons` to populate runtime libs under:
 
 When a required lib is missing, `scons` downloads pinned wheels and extracts only what is needed into that folder. Current pinned dependencies are:
 
-- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` — extracted as `libs/markdown2.py` for chat Markdown rendering.
+- **[markdown-it-py](https://pypi.org/project/markdown-it-py/)** `3.0.0` + **[mdurl](https://pypi.org/project/mdurl/)** `0.1.2` — extracted into `libs/` for chat Markdown rendering.
 - **[Pillow](https://pypi.org/project/Pillow/)** `12.1.1` for:
   - Python `3.11` `win32` -> `libs/lib_py3.11_win32/`
   - Python `3.13` `win_amd64` -> `libs/lib_py3.13/`

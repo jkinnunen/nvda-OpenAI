@@ -23,6 +23,7 @@ import ui
 from logHandler import log
 
 from . import apikeymanager
+from . import conversations
 from .audiohandlers import AudioHandlersMixin
 from .chatcompletion import CompletionThread
 from .historyhandlers import HistoryHandlersMixin
@@ -47,7 +48,7 @@ from .transcription import get_transcription_provider
 from .toolsmenu import show_tools_menu
 
 sys.path.insert(0, LIBS_BASE)
-import markdown2
+from markdown_it import MarkdownIt
 sys.path.remove(LIBS_BASE)
 
 from .apiclient import (
@@ -65,6 +66,7 @@ DATA_JSON_FP = os.path.join(DATA_DIR, "data.json")
 
 addToSession = None
 activeChatDlg = None
+_MARKDOWN_RENDERER = MarkdownIt("commonmark", {"html": False, "breaks": True}).enable("table")
 
 def EVT_RESULT(win, func):
 	win.Connect(-1, -1, EVT_RESULT_ID, func)
@@ -79,6 +81,10 @@ def copyToClipAsHTML(html_content):
 		wx.TheClipboard.Close()
 	else:
 		raise RuntimeError("Unable to open the clipboard")
+
+
+def render_markdown_html(text: str) -> str:
+	return _MARKDOWN_RENDERER.render(text or "")
 
 
 class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, HistoryHandlersMixin, wx.Dialog):
@@ -638,12 +644,15 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 
 	def _loadConversation(self, data):
 		"""Load conversation data (blocks, system) from saved conversation."""
-		from . import conversations
 		blocks = data.get("blocks", [])
-		if not blocks:
-			return
+		if not isinstance(blocks, list):
+			blocks = []
+		conv_name = data.get("name", _("Untitled conversation"))
+		self.SetTitle(f"{conv_name} - AI Hub")
 		# Clear messages control and reset segment chain for a clean load
 		self._clearMessagesSegments()
+		self.firstBlock = None
+		self.lastBlock = None
 		system = data.get("system", "")
 		if system and self.conf["saveSystem"]:
 			self.systemTextCtrl.SetValue(system)
@@ -680,6 +689,8 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 		conv_id = data.get("id")
 		if conv_id:
 			self._conversationId = conv_id
+		if not blocks:
+			return
 		prev = None
 		for b in blocks:
 			b.lastLen = len(b.responseText or "")
@@ -709,7 +720,6 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 
 	def _autoSaveConversation(self, force=False):
 		"""Save conversation state. Auto-save obeys setting unless forced (manual save)."""
-		from . import conversations
 		if not force and not self.conf.get("autoSaveConversation", True):
 			return False
 		blocks = self._getBlocksForSave()
@@ -767,7 +777,6 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 
 	def _renameConversation(self, evt=None):
 		"""Rename current conversation."""
-		from . import conversations
 		if not self._conversationId:
 			ui.message(_("Save the conversation first before renaming."))
 			return

@@ -168,7 +168,7 @@ Derlemeler, çalışma zamanı kitaplıklarını şu konuma yerleştirmek için 
 
 Gerekli bir kitaplık eksikse `scons`, sabitlenmiş wheel paketlerini indirir ve yalnızca gereken parçaları bu klasöre çıkarır. Güncel sabitlenmiş bağımlılıklar şunlardır:
 
-- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` — sohbet Markdown işlemesi için `libs/markdown2.py` olarak çıkarılır.
+- **[markdown-it-py](https://pypi.org/project/markdown-it-py/)** `3.0.0` + **[mdurl](https://pypi.org/project/mdurl/)** `0.1.2` — sohbet Markdown işlemesi için `libs/` içine çıkarılır.
 - **[Pillow](https://pypi.org/project/Pillow/)** `12.1.1`:
   - Python `3.11` `win32` -> `libs/lib_py3.11_win32/`
   - Python `3.13` `win_amd64` -> `libs/lib_py3.13/`

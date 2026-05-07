@@ -4,10 +4,12 @@ import json
 import os
 import re
 import threading
+from urllib.request import Request, urlopen
 import uuid
 import wave
 import winsound
 import wx
+import gui
 
 from logHandler import log
 import addonHandler
@@ -350,7 +352,6 @@ class RecordThread(threading.Thread):
 
 	def _transcribe_whisper_cpp(self, filename):
 		"""Transcribe via local whisper.cpp server."""
-		from urllib.request import Request, urlopen
 		host = self.conf["whisper.cpp"]["host"].strip()
 		if not host:
 			host = "http://127.0.0.1:8081"
@@ -428,7 +429,6 @@ class RecordThread(threading.Thread):
 				wx.PostEvent(self._notifyWindow, ResultEvent(msg))
 			else:
 				def _show_error():
-					import gui
 					gui.messageBox(msg, _("Transcription Error"), wx.OK | wx.ICON_ERROR)
 				wx.CallAfter(_show_error)
 			return

@@ -168,7 +168,7 @@ Las compilaciones usan `scons` para poblar las librerías de ejecución en:
 
 Cuando falta una librería requerida, `scons` descarga ruedas fijadas y extrae solo lo necesario en esa carpeta. Las dependencias fijadas actuales son:
 
-- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` — extraído como `libs/markdown2.py` para el renderizado Markdown del chat.
+- **[markdown-it-py](https://pypi.org/project/markdown-it-py/)** `3.0.0` + **[mdurl](https://pypi.org/project/mdurl/)** `0.1.2` — extraído en `libs/` para el renderizado Markdown del chat.
 - **[Pillow](https://pypi.org/project/Pillow/)** `12.1.1`, para:
   - Python `3.11` `win32` -> `libs/lib_py3.11_win32/`
   - Python `3.13` `win_amd64` -> `libs/lib_py3.13/`

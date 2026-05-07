@@ -378,8 +378,7 @@ class HistoryHandlersMixin:
 		self.message(_("Copied to prompt"))
 
 	def onCopyMessage(self, evt, isHtml=False):
-		from .maindialog import copyToClipAsHTML
-		import markdown2
+		from .maindialog import copyToClipAsHTML, render_markdown_html
 		text = self.messagesTextCtrl.GetStringSelection()
 		msg = _("Copy")
 		if not text:
@@ -398,10 +397,7 @@ class HistoryHandlersMixin:
 				label_text, text = self._getBlockTextByKind(block, "response")
 				msg = _("Copy response")
 		if isHtml:
-			text = markdown2.markdown(
-				text,
-				extras=["fenced-code-blocks", "footnotes", "header-ids", "spoiler", "strike", "tables", "task_list", "underline", "wiki-tables"]
-			)
+			text = render_markdown_html(text)
 			copyToClipAsHTML(text)
 			msg += ' ' + _("as formatted HTML")
 		else:
@@ -437,17 +433,7 @@ class HistoryHandlersMixin:
 		self.message(_("Block deleted"))
 
 	def onWebviewMessage(self, evt, isHtml=False):
-		import markdown2
-		extras = [
-			"footnotes",
-			"header-ids",
-			"spoiler",
-			"strike",
-			"tables",
-			"task_list",
-			"underline",
-			"wiki-tables",
-		]
+		from .maindialog import render_markdown_html
 		segment, block = self._getCurrentSegmentBlock()
 		if segment is None:
 			return
@@ -460,7 +446,7 @@ class HistoryHandlersMixin:
 			log.error(f"onWebviewMessage: {e}", exc_info=True)
 			self.message(_("An error occurred. More information is in the NVDA log."))
 			return
-		html = markdown2.markdown(text, extras=extras)
+		html = render_markdown_html(text)
 		ui.browseableMessage(
 			html,
 			title="OpenAI",

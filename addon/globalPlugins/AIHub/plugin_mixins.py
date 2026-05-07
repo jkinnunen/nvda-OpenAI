@@ -108,6 +108,8 @@ class DialogSessionMixin:
 		self._openMainDialogs = [d for d in getattr(self, "_openMainDialogs", []) if d and d.IsShown()]
 		if not forceNew and self._openMainDialogs:
 			dlg = self._openMainDialogs[-1]
+			if conversationData and hasattr(dlg, "_loadConversation"):
+				dlg._loadConversation(conversationData)
 			dlg.Raise()
 			dlg.SetFocus()
 			return

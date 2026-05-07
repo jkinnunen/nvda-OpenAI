@@ -103,25 +103,26 @@ def _ensure_pillow_libs():
 			_extract_wheel_to_dir(wheel_path, entry["folder"])
 
 
-def _ensure_markdown2_lib():
-	"""Download markdown2.py into addon/globalPlugins/AIHub/libs when missing."""
+def _ensure_markdown_it_libs():
+	"""Download markdown-it-py (+ deps) into addon/globalPlugins/AIHub/libs when missing."""
 	libs_base = os.path.join("addon", "globalPlugins", "AIHub", "libs")
-	markdown2_module = os.path.join(libs_base, "markdown2.py")
-	if os.path.isfile(markdown2_module):
+	markdown_it_pkg = os.path.join(libs_base, "markdown_it")
+	mdurl_pkg = os.path.join(libs_base, "mdurl")
+	if os.path.isdir(markdown_it_pkg) and os.path.isdir(mdurl_pkg):
 		return
 	os.makedirs(libs_base, exist_ok=True)
-	# Prefer latest tested version first, then fall back for older mirrors.
-	markdown2_versions = ("2.5.4", "2.5.3", "2.5.2", "2.5.1", "2.5.0", "2.4.13")
-	print("markdown2.py is missing. Downloading pinned markdown2 wheel...")
-	with tempfile.TemporaryDirectory(prefix="nvda-openai-markdown2-") as wheel_dir:
+	markdown_it_versions = ("3.0.0", "2.2.0")
+	mdurl_versions = ("0.1.2",)
+	print("markdown-it libraries are missing. Downloading pinned wheels...")
+	with tempfile.TemporaryDirectory(prefix="nvda-openai-markdown-it-") as wheel_dir:
 		last_error = None
-		for markdown2_version in markdown2_versions:
+		for markdown_it_version in markdown_it_versions:
 			download_cmd = [
 				sys.executable,
 				"-m",
 				"pip",
 				"download",
-				f"markdown2=={markdown2_version}",
+				f"markdown-it-py=={markdown_it_version}",
 				"--dest",
 				wheel_dir,
 				"--only-binary",
@@ -132,21 +133,53 @@ def _ensure_markdown2_lib():
 			except subprocess.CalledProcessError as err:
 				last_error = err
 				continue
-			wheel_name = f"markdown2-{markdown2_version}-py3-none-any.whl"
+			wheel_name = f"markdown_it_py-{markdown_it_version}-py3-none-any.whl"
 			wheel_path = os.path.join(wheel_dir, wheel_name)
 			if not os.path.isfile(wheel_path):
 				last_error = RuntimeError(f"Downloaded wheel not found: {wheel_name}.")
 				continue
-			_extract_single_file_from_wheel(wheel_path, "markdown2.py", markdown2_module)
-			print(f"Using markdown2 {markdown2_version}")
+			with zipfile.ZipFile(wheel_path, "r") as wheel_zip:
+				wheel_zip.extractall(libs_base)
+			print(f"Using markdown-it-py {markdown_it_version}")
+			break
+		else:
+			raise RuntimeError(
+				f"Could not download markdown-it-py from pinned versions {markdown_it_versions}. "
+				"Check network/index accessibility or adjust allowed versions."
+			) from last_error
+		for mdurl_version in mdurl_versions:
+			download_cmd = [
+				sys.executable,
+				"-m",
+				"pip",
+				"download",
+				f"mdurl=={mdurl_version}",
+				"--dest",
+				wheel_dir,
+				"--only-binary",
+				":all:",
+			]
+			try:
+				subprocess.run(download_cmd, check=True)
+			except subprocess.CalledProcessError as err:
+				last_error = err
+				continue
+			wheel_name = f"mdurl-{mdurl_version}-py3-none-any.whl"
+			wheel_path = os.path.join(wheel_dir, wheel_name)
+			if not os.path.isfile(wheel_path):
+				last_error = RuntimeError(f"Downloaded wheel not found: {wheel_name}.")
+				continue
+			with zipfile.ZipFile(wheel_path, "r") as wheel_zip:
+				wheel_zip.extractall(libs_base)
+			print(f"Using mdurl {mdurl_version}")
 			return
 		raise RuntimeError(
-			f"Could not download markdown2 from pinned versions {markdown2_versions}. "
+			f"Could not download mdurl from pinned versions {mdurl_versions}. "
 			"Check network/index accessibility or adjust allowed versions."
 		) from last_error
 
 
-_ensure_markdown2_lib()
+_ensure_markdown_it_libs()
 _ensure_pillow_libs()
 
 

@@ -168,7 +168,7 @@ Izgradnje koriste `scons` za popunjavanje biblioteka za izvođenje pod:
 
 Kada nedostaje potrebna biblioteka, `scons` preuzima zaključane wheel pakete i izdvaja samo ono što je potrebno u tu mapu. Trenutačno zaključane ovisnosti su:
 
-- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` — izdvojeno kao `libs/markdown2.py` za prikaz Markdowna u razgovoru.
+- **[markdown-it-py](https://pypi.org/project/markdown-it-py/)** `3.0.0` + **[mdurl](https://pypi.org/project/mdurl/)** `0.1.2` — izdvojeno u `libs/` za prikaz Markdowna u razgovoru.
 - **[Pillow](https://pypi.org/project/Pillow/)** `12.1.1` za:
   - Python `3.11` `win32` -> `libs/lib_py3.11_win32/`
   - Python `3.13` `win_amd64` -> `libs/lib_py3.13/`

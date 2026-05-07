@@ -168,7 +168,7 @@
 
 כאשר ספרייה נדרשת חסרה, `scons` מוריד חבילות wheel מוצמדות גרסה ומחלץ רק את מה שנדרש לתיקייה זו. התלויות המוצמדות הנוכחיות הן:
 
-- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` — מחולץ כ-`libs/markdown2.py` עבור רינדור Markdown בצ'אט.
+- **[markdown-it-py](https://pypi.org/project/markdown-it-py/)** `3.0.0` + **[mdurl](https://pypi.org/project/mdurl/)** `0.1.2` — מחולץ אל `libs/` עבור רינדור Markdown בצ'אט.
 - **[Pillow](https://pypi.org/project/Pillow/)** `12.1.1` עבור:
   - Python `3.11` `win32` -> `libs/lib_py3.11_win32/`
   - Python `3.13` `win_amd64` -> `libs/lib_py3.13/`

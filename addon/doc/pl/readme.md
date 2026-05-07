@@ -168,7 +168,7 @@ Kompilacje używają `scons` do uzupełniania bibliotek uruchomieniowych w:
 
 Gdy brakuje wymaganej biblioteki, `scons` pobiera przypięte pakiety wheel i wyodrębnia do tego folderu tylko to, co potrzebne. Obecnie przypięte zależności to:
 
-- **[markdown2](https://pypi.org/project/markdown2/)** `2.5.4` — wyodrębniany jako `libs/markdown2.py` do renderowania Markdownu czatu.
+- **[markdown-it-py](https://pypi.org/project/markdown-it-py/)** `3.0.0` + **[mdurl](https://pypi.org/project/mdurl/)** `0.1.2` — wyodrębniany do `libs/` do renderowania Markdownu czatu.
 - **[Pillow](https://pypi.org/project/Pillow/)** `12.1.1` dla:
   - Python `3.11` `win32` -> `libs/lib_py3.11_win32/`
   - Python `3.13` `win_amd64` -> `libs/lib_py3.13/`
