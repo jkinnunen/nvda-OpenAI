@@ -380,7 +380,7 @@ def show_conversations_manager(plugin):
 	"""Show the conversation management dialog."""
 	from . import __init__ as init_mod
 	client = plugin.getClient()
-conf = config.conf.get("AIHub", {})
+	conf = config.conf.get("AIHub", {})
 	if not client or not conf:
 		ui.message(getattr(init_mod, "NO_AUTHENTICATION_KEY_PROVIDED_MSG", _("No API key provided")))
 		return
