@@ -1,5 +1,4 @@
-﻿# coding: UTF-8
-import os
+﻿import os
 import addonHandler
 import config
 import globalPluginHandler
@@ -25,7 +24,6 @@ class GlobalPlugin(MenuMixin, DialogSessionMixin, AskRecordingMixin, globalPlugi
 	def __init__(self):
 		super().__init__()
 		gui.settingsDialogs.NVDASettingsDialog.categoryClasses.append(SettingsDlg)
-		self.client = None
 		self._openMainDialogs = []
 		self.recordThread = None
 		self.askRecordThread = None
@@ -36,6 +34,22 @@ class GlobalPlugin(MenuMixin, DialogSessionMixin, AskRecordingMixin, globalPlugi
 
 	def terminate(self):
 		from .consts import cleanup_temp_dir
+		from .ask_question import mci_stop_ask_audio
+		if self.recordThread:
+			try:
+				self.recordThread.stop()
+			except Exception:
+				log.warning("Failed to stop record thread during terminate", exc_info=True)
+			self.recordThread = None
+		if self.askRecordThread:
+			try:
+				self.askRecordThread.stop()
+			except Exception:
+				log.warning("Failed to stop ask record thread during terminate", exc_info=True)
+			self.askRecordThread = None
+		if self._askAudioPlaying:
+			mci_stop_ask_audio()
+			self._askAudioPlaying = False
 		cleanup_temp_dir()
 		if SettingsDlg in gui.settingsDialogs.NVDASettingsDialog.categoryClasses:
 			gui.settingsDialogs.NVDASettingsDialog.categoryClasses.remove(SettingsDlg)
@@ -45,10 +59,7 @@ class GlobalPlugin(MenuMixin, DialogSessionMixin, AskRecordingMixin, globalPlugi
 
 	def getClient(self):
 		if conf["renewClient"]:
-			self.client = None
 			conf["renewClient"] = False
-		if self.client:
-			return self.client
 		for provider in apikeymanager.AVAILABLE_PROVIDERS:
 			manager = apikeymanager.get(provider)
 			if not manager.isReady():
@@ -59,8 +70,7 @@ class GlobalPlugin(MenuMixin, DialogSessionMixin, AskRecordingMixin, globalPlugi
 				return None
 			organization = manager.get_api_key(use_org=True)
 			org_val = organization.split(":=", 1)[1] if organization and organization.count(":=") == 1 else None
-			self.client = OpenAIClient(api_key=api_key, base_url=base_url, organization=org_val)
-			return self.client
+			return OpenAIClient(api_key=api_key, base_url=base_url, organization=org_val)
 		return None
 
 	@script(

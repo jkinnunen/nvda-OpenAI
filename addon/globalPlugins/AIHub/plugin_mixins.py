@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Mixins used by GlobalPlugin to keep __init__.py focused."""
 
 import os
@@ -10,6 +9,7 @@ import config
 import gui
 import ui
 import wx
+from logHandler import log
 from scriptHandler import script
 
 from . import apikeymanager
@@ -140,7 +140,7 @@ class DialogSessionMixin:
 				offset = 26
 				dlg.SetPosition((x + offset, y + offset))
 			except Exception:
-				pass
+				log.debug("Failed to probe models for provider %s", provider, exc_info=True)
 		dlg.Raise()
 
 	def onShowMainDialog(self, evt=None, forceNew=False):

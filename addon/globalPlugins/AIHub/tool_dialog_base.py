@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Base class for single-tool dialogs."""
 
 import os
@@ -181,7 +180,7 @@ class ToolDialogBase(wx.Dialog):
 	def configure_client(self, account_id):
 		if self.client is None:
 			raise RuntimeError(_("No API client available. Configure at least one account first."))
-		configure_client_for_provider(self.client, self.provider, account_id=account_id)
+		self.client = configure_client_for_provider(self.client, self.provider, account_id=account_id, clone=True)
 
 	def suggest_open_audio(self, path):
 		self.open_local_path(path, err_title="OpenAI")

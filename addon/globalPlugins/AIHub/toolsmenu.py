@@ -1,9 +1,9 @@
-# coding: UTF-8
 """Tools menu and registry for single-tool dialogs."""
 
 import addonHandler
 import wx
 from enum import StrEnum, auto
+from logHandler import log
 
 from . import apikeymanager
 from .tool_lyria_dialog import Lyria3ProToolDialog
@@ -134,7 +134,7 @@ def open_tool_dialog(parent, tool_def, conversationData=None, plugin=None):
 			if dialog in _OPEN_TOOL_DIALOGS:
 				_OPEN_TOOL_DIALOGS.remove(dialog)
 		except Exception:
-			pass
+			log.debug("Failed to remove closed tool dialog from tracking list", exc_info=True)
 		evt.Skip()
 
 	dlg.Bind(wx.EVT_CLOSE, _on_close)

@@ -55,7 +55,7 @@ def transcribe_audio_file(path, conf, client=None):
 	else:
 		if not client:
 			return None
-		configure_client_for_provider(client, "OpenAI")
+		client = configure_client_for_provider(client, "OpenAI", clone=True)
 		rt = RecordThread(client, conf=conf)
 		result = rt._transcribe_openai(path)
 	if result is None:
@@ -315,7 +315,7 @@ class RecordThread(threading.Thread):
 			return
 		wavefile = wave.open(filename, "wb")
 		wavefile.setnchannels(self.conf["channels"])
-		wavefile.setsampwidth(2) # 16 bits
+		wavefile.setsampwidth(2)
 		wavefile.setframerate(sampleRate)
 		wavefile.writeframes(data)
 		wavefile.close()
@@ -326,7 +326,7 @@ class RecordThread(threading.Thread):
 
 	def get_filename(self):
 		ensure_temp_dir()
-		return os.path.join(TEMP_DIR, "tmp.wav")
+		return os.path.join(TEMP_DIR, f"tmp_{uuid.uuid4().hex}.wav")
 
 	def _post_audio_path(self, path):
 		if isinstance(path, str):
@@ -394,10 +394,15 @@ class RecordThread(threading.Thread):
 		"""Transcribe via OpenAI Whisper API."""
 		if not self.client:
 			raise ValueError(_("OpenAI client is not available for transcription."))
-		configure_client_for_provider(self.client, "OpenAI", account_id=self._transcriptionAccountId)
+		client = configure_client_for_provider(
+			self.client,
+			"OpenAI",
+			account_id=self._transcriptionAccountId,
+			clone=True,
+		)
 		model = self._transcriptionModel or self.conf.get("whisperModel", "whisper-1")
 		with open(filename, "rb") as audio_file:
-			return self.client.audio.transcriptions.create(
+			return client.audio.transcriptions.create(
 				model=model,
 				file=audio_file,
 				response_format=self.responseFormat,

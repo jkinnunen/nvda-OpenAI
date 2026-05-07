@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Helpers for ask-question voice flow and audio playback."""
 
 import base64
@@ -123,7 +122,7 @@ class AskQuestionThread(threading.Thread):
 			)
 			queueHandler.queueFunction(queueHandler.eventQueue, ui.message, msg)
 			return
-		configure_client_for_provider(self._client, provider)
+		client = configure_client_for_provider(self._client, provider, clone=True)
 		params = {
 			"model": model_id,
 			"messages": [{"role": "user", "content": content}],
@@ -134,7 +133,7 @@ class AskQuestionThread(threading.Thread):
 			params["modalities"] = ["text", "audio"]
 			params["audio"] = {"voice": voice, "format": "wav"}
 		try:
-			response = self._client.chat.completions.create(**params)
+			response = client.chat.completions.create(**params)
 			text = ""
 			audio_path = None
 			if response and response.choices:

@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Dedicated dialog for Mistral Voxtral TTS."""
 
 import base64
@@ -177,7 +176,7 @@ class VoxtralTTSToolDialog(ToolDialogBase):
 		):
 			ctrl.Enable(not busy)
 
-	def _run_thread(self, acc_id, text, model, voice_id, fmt, ref_b64):
+	def _run_thread(self, acc_id, text, model, voice_id, fmt, ref_b64, ref_audio_path):
 		err = None
 		out_path = None
 		try:
@@ -196,7 +195,7 @@ class VoxtralTTSToolDialog(ToolDialogBase):
 			out_path = persist_local_file(out_path, "audio", prefix="voxtral_tts", fallback_ext=ext)
 		except Exception as e:
 			err = e
-		wx.CallAfter(self._onThreadDone, out_path, err, text, model, voice_id, fmt, self.refAudioText.GetValue().strip())
+		wx.CallAfter(self._onThreadDone, out_path, err, text, model, voice_id, fmt, ref_audio_path)
 
 	def _onThreadDone(self, out_path, err, text, model, voice_id, fmt, ref_audio):
 		stop_progress_sound()
@@ -411,7 +410,7 @@ class VoxtralTTSToolDialog(ToolDialogBase):
 		self.begin_long_task(_("Speech generation in progress..."), self._setBusy)
 		self._worker = threading.Thread(
 			target=self._run_thread,
-			args=(acc_id, text, model, voice_id, fmt, ref_b64),
+			args=(acc_id, text, model, voice_id, fmt, ref_b64, ref_audio),
 			daemon=True,
 		)
 		self._worker.start()

@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Chat completion thread implementation."""
 import base64
 import json
@@ -243,7 +242,7 @@ class CompletionThread(threading.Thread):
 			winsound.PlaySound(SND_PROGRESS, winsound.SND_ASYNC | winsound.SND_LOOP)
 		account = wnd.getCurrentAccount() if hasattr(wnd, "getCurrentAccount") else None
 		account_id = account.get("id") if account and account.get("provider") == model.provider else None
-		configure_client_for_provider(client, model.provider, account_id=account_id)
+		client = configure_client_for_provider(client, model.provider, account_id=account_id, clone=True)
 		audio_output = getattr(model, "audioOutput", False)
 		use_stream = stream and not audio_output
 		params = {

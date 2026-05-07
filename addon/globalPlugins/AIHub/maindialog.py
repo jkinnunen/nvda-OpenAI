@@ -1,4 +1,3 @@
-# coding: UTF-8
 import base64
 import datetime
 import json
@@ -6,6 +5,7 @@ import mimetypes
 import os
 import re
 import sys
+import tempfile
 import threading
 import time
 import winsound
@@ -30,6 +30,7 @@ from .imagehandlers import ImageHandlersMixin
 from .modelhandlers_core import ModelHandlersMixin
 from .consts import (
 	ADDON_DIR, ADDON_LIBS_DIR, DATA_DIR, LIBS_BASE, TEMP_DIR, cleanup_temp_dir, stop_progress_sound,
+	ensure_temp_dir,
 	TOP_P_MIN, TOP_P_MAX,
 	DEFAULT_SYSTEM_PROMPT,
 	TTS_VOICES, TTS_DEFAULT_VOICE,
@@ -61,7 +62,6 @@ from .apiclient import (
 addonHandler.initTranslation()
 
 DATA_JSON_FP = os.path.join(DATA_DIR, "data.json")
-AUDIO_RESPONSE_FILE = os.path.join(TEMP_DIR, "audio_response.wav")
 
 addToSession = None
 activeChatDlg = None
@@ -82,6 +82,16 @@ def copyToClipAsHTML(html_content):
 
 
 class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, HistoryHandlersMixin, wx.Dialog):
+	def _findHistoryObject(self):
+		"""Find the editable history object without relying on fixed child indices."""
+		foreground = api.getForegroundObject()
+		if not foreground:
+			return None
+		children = getattr(foreground, "children", []) or []
+		for child in children:
+			if getattr(child, "role", None) == controlTypes.ROLE_EDITABLETEXT:
+				return child
+		return None
 
 	def __init__(
 		self,
@@ -890,18 +900,7 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 		self.foregroundObj = api.getForegroundObject()
 		if not self.foregroundObj:
 			log.error("Unable to retrieve the foreground object", exc_info=True)
-		try:
-			children = getattr(self.foregroundObj, "children", []) or []
-			obj = children[4] if len(children) > 4 else None
-			if obj and obj.role == controlTypes.ROLE_EDITABLETEXT:
-				self.historyObj = obj
-			else:
-				self.historyObj = None
-				if obj is None and children:
-					log.debug("History object not at children[4] (foreground may not be dialog)")
-		except Exception as err:
-			log.error(f"Error finding history object: {err}", exc_info=True)
-			self.historyObj = None
+		self.historyObj = self._findHistoryObject()
 		self.stopRequest = threading.Event()
 		self.worker = CompletionThread(self)
 		self.worker.start()
@@ -1234,7 +1233,9 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 				images.append({"type": "input_file", "file_url": path, "filename": imageFile.name})
 			elif imageFile.type == ImageFileTypes.IMAGE_LOCAL:
 				if conf["images"]["resize"]:
-					path_resized_image = os.path.join(TEMP_DIR, "last_resized.jpg")
+					ensure_temp_dir()
+					fd, path_resized_image = tempfile.mkstemp(suffix=".jpg", dir=TEMP_DIR)
+					os.close(fd)
 					if resize_image(
 						path,
 						max_width=conf["images"]["maxWidth"],
@@ -1266,7 +1267,6 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 		pathList = pathList or self.audioPathList
 		if not pathList:
 			return []
-		ext_to_format = {".wav": "wav", ".mp3": "mp3", ".m4a": "m4a", ".webm": "webm", ".mp4": "mp4"}
 		content = []
 		if prompt:
 			content.append({"type": "text", "text": prompt})

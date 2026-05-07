@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Conversation storage: save, load, list, rename, delete."""
 import base64
 import json
@@ -174,7 +173,7 @@ def _is_under_data_dir(path: str) -> bool:
 	try:
 		abs_path = os.path.abspath(path)
 		abs_data = os.path.abspath(DATA_DIR)
-		return abs_path.startswith(abs_data)
+		return os.path.commonpath([abs_path, abs_data]) == abs_data
 	except Exception:
 		return False
 
@@ -728,7 +727,7 @@ def delete_conversation(conv_id: str) -> bool:
 			data = {}
 		to_delete_candidates = _collect_referenced_local_paths(data, conv_id=conv_id)
 		other_refs = set()
-		if os.path.isdir(CONVERSATIONS_DIR):
+		if to_delete_candidates and os.path.isdir(CONVERSATIONS_DIR):
 			for name in os.listdir(CONVERSATIONS_DIR):
 				if not name.endswith(".json"):
 					continue

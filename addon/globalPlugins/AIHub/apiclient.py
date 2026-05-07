@@ -1,4 +1,3 @@
-# coding: UTF-8
 """
 HTTP-based API client for OpenAI-compatible endpoints.
 Replaces the openai Python package to avoid bundling dependencies in NVDA.
@@ -246,16 +245,6 @@ def _extract_audio_bytes_from_json_payload(payload: Any) -> Optional[bytes]:
 			if audio:
 				return audio
 	return None
-
-
-def _get_organization_header(organization: Optional[str]) -> Optional[str]:
-	"""Extract organization value for header from stored format."""
-	if not organization or not organization.strip():
-		return None
-	org = organization.strip()
-	if ":=" in org and org.count(":= ") == 1:
-		return org.split(":= ", 1)[-1]
-	return org if org != ":=" else None
 
 
 def _build_anthropic_headers(api_key: str) -> dict:
@@ -598,6 +587,17 @@ class OpenAIClient:
 		self._opener = _create_opener()
 		self.chat = _ChatCompletions(self)
 		self.audio = _Audio(self)
+
+	def clone(self) -> "OpenAIClient":
+		"""Return a detached client copy for thread-safe per-request mutations."""
+		other = OpenAIClient(
+			api_key=self.api_key,
+			base_url=self.base_url,
+			organization=self.organization,
+		)
+		other.provider = getattr(self, "provider", "OpenAI")
+		other.account_id = getattr(self, "account_id", None)
+		return other
 
 	def _request(
 		self,
@@ -1529,10 +1529,12 @@ def truncate_error_for_user(err, max_len: int = 300) -> str:
 	return msg[:max_len] + "..."
 
 
-def configure_client_for_provider(client, provider: str, account_id: str = None):
-	"""Set client base_url, api_key, organization for provider/account."""
+def configure_client_for_provider(client, provider: str, account_id: str = None, clone: bool = False):
+	"""Set client base_url, api_key, organization for provider/account and return configured client."""
 	from . import apikeymanager
 	from .consts import BASE_URLs
+	if clone and hasattr(client, "clone"):
+		client = client.clone()
 	manager = apikeymanager.get(provider)
 	client.base_url = manager.get_base_url(account_id=account_id) or BASE_URLs[provider]
 	api_key = manager.get_api_key(account_id=account_id)
@@ -1542,3 +1544,4 @@ def configure_client_for_provider(client, provider: str, account_id: str = None)
 	client.organization = manager.get_organization_key(account_id=account_id)
 	client.provider = provider
 	client.account_id = account_id
+	return client
