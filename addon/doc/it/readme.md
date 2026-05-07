@@ -1,10 +1,10 @@
-Se desideri un'esperienza desktop dedicata con flussi di lavoro aggiuntivi, consulta [BasiliskLLM](https://github.com/SigmaNight/basiliskLLM/) (app standalone con un componente aggiuntivo NVDA essenziale). AI Hub rimane un'opzione completa direttamente in NVDA.
+Se desideri un'esperienza desktop dedicata con flussi di lavoro aggiuntivi, consulta [BasiliskLLM](https://github.com/SigmaNight/basiliskLLM/) (app standalone con un componente aggiuntivo NVDA essenziale). AI-Hub rimane un'opzione completa direttamente in NVDA.
 
-# AI Hub
+# AI-Hub
 
-**AI Hub** è un componente aggiuntivo per NVDA che collega lo screen reader a più API di modelli linguistici di grandi dimensioni (LLM). Puoi usarlo per scrivere, riassumere, ottenere aiuto nelle traduzioni, analizzare immagini (immagini e screenshot), porre domande vocali, trascrivere e usare finestre strumenti opzionali (TTS, OCR e altro), senza uscire da NVDA.
+**AI-Hub** è un componente aggiuntivo per NVDA che collega lo screen reader a più API di modelli linguistici di grandi dimensioni (LLM). Puoi usarlo per scrivere, riassumere, ottenere aiuto nelle traduzioni, analizzare immagini (immagini e screenshot), porre domande vocali, trascrivere e usare finestre strumenti opzionali (TTS, OCR e altro), senza uscire da NVDA.
 
-Il **nome del pacchetto** in NVDA è ancora `openai` (per compatibilità con le installazioni esistenti). Il **nome visualizzato** che vedi nei menu e nelle impostazioni è **AI Hub**.
+Il **nome del pacchetto** in NVDA è ancora `openai` (per compatibilità con le installazioni esistenti). Il **nome visualizzato** che vedi nei menu e nelle impostazioni è **AI-Hub**.
 
 ## Funzionalità in breve
 
@@ -12,16 +12,16 @@ Il **nome del pacchetto** in NVDA è ancora `openai` (per compatibilità con le 
 - **Immagini e documenti** come allegati da file; **URL** a file remoti con controlli sul tipo allineati al **provider selezionato**.
 - **Incolla intelligente** nel campo prompt: incolla file dagli appunti, percorsi dal testo o un singolo URL (disponibile anche dal menu contestuale del prompt). `Ctrl+V` usa la stessa logica quando il focus è sul prompt.
 - **Salvataggio delle conversazioni e cronologia** con rinomina, eliminazione e riapertura.
-- **Fai una domanda** da qualsiasi punto (nessun tasto predefinito): assegna un gesto in **Gesti di immissione → AI Hub** per registrare, inviare e ascoltare o leggere la risposta.
+- **Fai una domanda** da qualsiasi punto (nessun tasto predefinito): assegna un gesto in **Gesti di immissione → AI-Hub** per registrare, inviare e ascoltare o leggere la risposta.
 - **Descrizione globale**: screenshot (`NVDA+E`) o regione dell'oggetto navigatore (`NVDA+O`) inviati in una sessione di chat.
-- Sottomenu **Tools** (in NVDA → AI Hub): utilità specifiche del provider come TTS, OCR, speech-to-text, audio Lyria e gestione modelli Ollama.
+- Sottomenu **Tools** (in NVDA → AI-Hub): utilità specifiche del provider come TTS, OCR, speech-to-text, audio Lyria e gestione modelli Ollama.
 - Le opzioni **ragionamento / ricerca web** compaiono solo quando il **modello corrente** le supporta (variano in base al provider).
 
 Questo add-on **non** include un proprio controllo degli aggiornamenti. Gli **aggiornamenti** sono gestiti tramite lo **Store ufficiale dei componenti aggiuntivi di NVDA** quando installi da lì. Se installi manualmente dalla [pagina delle release](https://github.com/aaclause/nvda-OpenAI/releases), installa le versioni `.nvda-addon` più recenti allo stesso modo.
 
 ## Provider supportati
 
-Configura **uno o più provider** in NVDA **Preferenze → Impostazioni → AI Hub**. Ogni provider può contenere **più account con nome** (chiavi API, organizzazione facoltativa o URL base dove applicabile).
+Configura **uno o più provider** in NVDA **Preferenze → Impostazioni → AI-Hub**. Ogni provider può contenere **più account con nome** (chiavi API, organizzazione facoltativa o URL base dove applicabile).
 
 | Provider | Ruolo |
 |----------|------|
@@ -39,7 +39,7 @@ L'add-on può rilevare le chiavi API da **variabili d'ambiente** quando sono imp
 
 ### Backend speech-to-text (trascrizione)
 
-Per la **trascrizione da microfono/file** nel flusso principale (non nello strumento separato di trascrizione OpenAI), puoi scegliere tra **whisper_cpp** (locale), **openai** (API Whisper) e **mistral** nella sezione **Audio** delle impostazioni di AI Hub.
+Per la **trascrizione da microfono/file** nel flusso principale (non nello strumento separato di trascrizione OpenAI), puoi scegliere tra **whisper_cpp** (locale), **openai** (API Whisper) e **mistral** nella sezione **Audio** delle impostazioni di AI-Hub.
 
 ## Installazione
 
@@ -49,13 +49,13 @@ Per la **trascrizione da microfono/file** nel flusso principale (non nello strum
 ## Configurazione iniziale
 
 1. Apri **NVDA → Preferenze → Impostazioni**.
-2. Seleziona la categoria **AI Hub**.
+2. Seleziona la categoria **AI-Hub**.
 3. In **API Accounts**, scegli **Add account...**.
 4. Nella finestra dell'account, scegli un provider, inserisci un nome account e compila i campi obbligatori (chiave API per la maggior parte dei provider; URL base per **Custom OpenAI** e **Ollama**, con Ollama che usa come predefinito http://127.0.0.1:11434/v1 se vuoto).
 5. Salva, poi facoltativamente aggiungi altri account, modifica quelli esistenti o rimuovi quelli non usati dall'elenco.
 6. Facoltativamente, regola **Audio**, **Chat feedback**, **Advanced** / temperatura e **Auto-save conversation** (attivo per impostazione predefinita).
 
-Finché almeno un account provider non è pronto, aprendo la finestra principale ti verrà chiesto di aggiungere le chiavi nelle impostazioni di AI Hub.
+Finché almeno un account provider non è pronto, aprendo la finestra principale ti verrà chiesto di aggiungere le chiavi nelle impostazioni di AI-Hub.
 
 ## Aggiornamento da vecchie versioni “Open AI”
 
@@ -66,9 +66,9 @@ Se hai usato una versione precedente di questo add-on:
 
 Non devi spostare i file manualmente, a meno che tu non usi una configurazione personalizzata.
 
-## Menu NVDA: AI Hub
+## Menu NVDA: AI-Hub
 
-Nel menu NVDA trovi **AI Hub** (con la versione installata nell'etichetta). Le voci includono:
+Nel menu NVDA trovi **AI-Hub** (con la versione installata nell'etichetta). Le voci includono:
 
 - **Documentazione** — apre la guida utente nel browser (`doc\en\readme.html`).
 - **Finestra principale…** — apre la finestra di chat (`NVDA+G` predefinito).
@@ -78,7 +78,7 @@ Nel menu NVDA trovi **AI Hub** (con la versione installata nell'etichetta). Le v
 
 ## Finestra principale
 
-Aprila con **`NVDA+G`** oppure con **Finestra principale…** dal menu AI Hub.
+Aprila con **`NVDA+G`** oppure con **Finestra principale…** dal menu AI-Hub.
 
 ### Cosa puoi fare
 
@@ -107,7 +107,7 @@ Il prompt di sistema orienta il comportamento del modello. È fornito un valore 
 
 ## Cronologia conversazioni
 
-Usa **Cronologia conversazioni…** dal menu AI Hub, oppure assegna un gesto in **Gesti di immissione → AI Hub**.
+Usa **Cronologia conversazioni…** dal menu AI-Hub, oppure assegna un gesto in **Gesti di immissione → AI-Hub**.
 
 Puoi elencare, aprire, rinominare, eliminare e creare conversazioni. Dalla finestra principale, **F2** e **Ctrl+N** aiutano a gestire la sessione corrente.
 
@@ -117,7 +117,7 @@ Se **Salvataggio automatico conversazione** è attivo nelle impostazioni (predef
 
 ## Fai una domanda (voce)
 
-Questo comando **non ha un tasto predefinito**. Assegnane uno in **Gesti di immissione → AI Hub**.
+Questo comando **non ha un tasto predefinito**. Assegnane uno in **Gesti di immissione → AI-Hub**.
 
 - Prima pressione: avvia la registrazione.
 - Seconda pressione durante la registrazione: interrompe e invia.
@@ -132,7 +132,7 @@ Se la finestra principale ha il focus, viene usato il suo **modello corrente**; 
 
 ## Sottomenu Strumenti
 
-La voce **Strumenti** nel menu AI Hub apre finestre raggruppate per provider (ognuna può richiedere il relativo account API):
+La voce **Strumenti** nel menu AI-Hub apre finestre raggruppate per provider (ognuna può richiedere il relativo account API):
 
 | Area menu | Strumento |
 |-----------|------|
@@ -141,20 +141,20 @@ La voce **Strumenti** nel menu AI Hub apre finestre raggruppate per provider (og
 | OpenAI | **TTS…**, **Trascrizione / Traduzione…** |
 | Ollama | **Gestione modelli…** |
 
-Se non è configurato alcun account per il provider di uno strumento, l'add-on ti chiederà di aggiungerlo nelle impostazioni di AI Hub.
+Se non è configurato alcun account per il provider di uno strumento, l'add-on ti chiederà di aggiungerlo nelle impostazioni di AI-Hub.
 
 ## Comandi globali
 
-Tutti i gesti predefiniti possono essere modificati in **NVDA → Preferenze → Gesti di immissione → AI Hub**.
+Tutti i gesti predefiniti possono essere modificati in **NVDA → Preferenze → Gesti di immissione → AI-Hub**.
 
 | Gesto | Azione |
 |---------|--------|
-| `NVDA+G` | Mostra la finestra principale di AI Hub |
+| `NVDA+G` | Mostra la finestra principale di AI-Hub |
 | `NVDA+E` | Screenshot e descrizione (aggiunge l'immagine a una sessione) |
 | `NVDA+O` | Descrivi la regione dell'oggetto navigatore corrente |
-| *(nessun gesto predefinito)* | Cronologia conversazioni. Assegnalo in Gesti di immissione → AI Hub. |
-| *(nessun gesto predefinito)* | Fai una domanda (registra / invia / ferma audio). Assegnalo in Gesti di immissione → AI Hub. |
-| *(nessun gesto predefinito)* | Attiva/disattiva registrazione microfono e trascrizione. Assegnalo in Gesti di immissione → AI Hub. |
+| *(nessun gesto predefinito)* | Cronologia conversazioni. Assegnalo in Gesti di immissione → AI-Hub. |
+| *(nessun gesto predefinito)* | Fai una domanda (registra / invia / ferma audio). Assegnalo in Gesti di immissione → AI-Hub. |
+| *(nessun gesto predefinito)* | Attiva/disattiva registrazione microfono e trascrizione. Assegnalo in Gesti di immissione → AI-Hub. |
 
 ## Dove sono archiviati i dati
 
@@ -177,7 +177,7 @@ La directory `libs` è intenzionalmente ignorata da git; chi contribuisce non de
 
 ## Risoluzione problemi (breve)
 
-- **"Nessun account configurato"** — aggiungi una chiave API per il provider selezionato nelle impostazioni **AI Hub**.
+- **"Nessun account configurato"** — aggiungi una chiave API per il provider selezionato nelle impostazioni **AI-Hub**.
 - **Il provider rifiuta un allegato** — controlla tipo e dimensione del file; prova un altro modello o provider che supporti il contenuto multimediale necessario.
 
-Per problemi e contributi, usa il link al **repository GitHub** dal menu AI Hub.
+Per problemi e contributi, usa il link al **repository GitHub** dal menu AI-Hub.

@@ -387,7 +387,7 @@ class RecordThread(threading.Thread):
 		manager = apikeymanager.get("MistralAI")
 		api_key = manager.get_api_key(account_id=self._transcriptionAccountId)
 		if not api_key or not api_key.strip():
-			raise ValueError(_("No Mistral API key configured. Please add one in AI Hub settings."))
+			raise ValueError(_("No Mistral API key configured. Please add one in AI-Hub settings."))
 		model = self._transcriptionModel or self.conf.get("voxtralModel", "voxtral-mini-latest")
 		return transcribe_audio_mistral(api_key=api_key, file_path=filename, model=model)
 

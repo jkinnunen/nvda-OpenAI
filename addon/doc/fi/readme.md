@@ -1,10 +1,10 @@
-Jos haluat erillisen työpöytäkokemuksen ja lisätyönkulkuja, tutustu [BasiliskLLM:ään](https://github.com/SigmaNight/basiliskLLM/) (itsenäinen sovellus ja kevyt NVDA-lisäosa). AI Hub on edelleen täysiverinen vaihtoehto NVDA:n sisällä.
+Jos haluat erillisen työpöytäkokemuksen ja lisätyönkulkuja, tutustu [BasiliskLLM:ään](https://github.com/SigmaNight/basiliskLLM/) (itsenäinen sovellus ja kevyt NVDA-lisäosa). AI-Hub on edelleen täysiverinen vaihtoehto NVDA:n sisällä.
 
-# AI Hub
+# AI-Hub
 
-**AI Hub** on NVDA-lisäosa, joka yhdistää ruudunlukijasi useisiin suurten kielimallien (LLM) rajapintoihin. Voit käyttää sitä kirjoittamiseen, tiivistämiseen, käännösapuun, kuvien tulkintaan (kuvat ja kuvakaappaukset), äänikysymyksiin, litterointiin ja valinnaisiin työkaluikkunoihin (TTS, OCR ja muuta) poistumatta NVDA:sta.
+**AI-Hub** on NVDA-lisäosa, joka yhdistää ruudunlukijasi useisiin suurten kielimallien (LLM) rajapintoihin. Voit käyttää sitä kirjoittamiseen, tiivistämiseen, käännösapuun, kuvien tulkintaan (kuvat ja kuvakaappaukset), äänikysymyksiin, litterointiin ja valinnaisiin työkaluikkunoihin (TTS, OCR ja muuta) poistumatta NVDA:sta.
 
-Lisäosan **pakettinimi** NVDA:ssa on yhä `openai` (yhteensopivuus olemassa olevien asennusten kanssa). Valikoissa ja asetuksissa näkyvä **näyttönimi** on **AI Hub**.
+Lisäosan **pakettinimi** NVDA:ssa on yhä `openai` (yhteensopivuus olemassa olevien asennusten kanssa). Valikoissa ja asetuksissa näkyvä **näyttönimi** on **AI-Hub**.
 
 ## Ominaisuudet yhdellä silmäyksellä
 
@@ -12,16 +12,16 @@ Lisäosan **pakettinimi** NVDA:ssa on yhä `openai` (yhteensopivuus olemassa ole
 - **Kuvat ja dokumentit** tiedostoliitteinä; lisäksi **URL-osoitteet** etätiedostoihin tyyppitarkistuksilla, jotka vastaavat **valittua palveluntarjoajaa**.
 - **Älykäs liittäminen** kehotekentässä: liitä tiedostoja leikepöydältä, polkuja tekstistä tai yksittäinen URL (saatavilla myös kehotteen kontekstivalikosta). `Ctrl+V` käyttää samaa logiikkaa, kun kohdistus on kehotteessa.
 - **Keskustelujen tallennus ja historia** uudelleennimeämisellä, poistolla ja uudelleenavaamisella.
-- **Kysy kysymys** mistä tahansa (ei oletusnäppäintä): määritä ele kohdassa **Syöte-eleet -> AI Hub**, jotta voit nauhoittaa, lähettää sekä kuunnella tai lukea vastauksen.
+- **Kysy kysymys** mistä tahansa (ei oletusnäppäintä): määritä ele kohdassa **Syöte-eleet -> AI-Hub**, jotta voit nauhoittaa, lähettää sekä kuunnella tai lukea vastauksen.
 - **Yleiskuvaus**: kuvakaappaus (`NVDA+E`) tai navigaattoriobjektin alue (`NVDA+O`) lähetetään keskusteluistuntoon.
-- **Työkalut**-alivalikko (NVDA -> AI Hub): palveluntarjoajakohtaisia toimintoja, kuten TTS, OCR, puheesta tekstiksi, Lyria-audio ja Ollama-mallinhallinta.
+- **Työkalut**-alivalikko (NVDA -> AI-Hub): palveluntarjoajakohtaisia toimintoja, kuten TTS, OCR, puheesta tekstiksi, Lyria-audio ja Ollama-mallinhallinta.
 - **Päättely-/verkkohaku**-asetukset näkyvät vain, kun **nykyinen malli** tukee niitä (tuki vaihtelee palveluntarjoajan mukaan).
 
 Tämä lisäosa **ei** sisällä omaa päivitystarkistinta. **Päivitykset** hoidetaan **NVDA:n virallisen lisäosakaupan** kautta, kun asennat lisäosan sieltä. Jos asennat manuaalisesti [julkaisusivulta](https://github.com/aaclause/nvda-OpenAI/releases), asenna uudemmat `.nvda-addon`-versiot samalla tavalla.
 
 ## Tuetut palveluntarjoajat
 
-Määritä **yksi tai useampi palveluntarjoaja** NVDA:ssa kohdassa **Asetukset -> Asetukset -> AI Hub**. Jokaisella palveluntarjoajalla voi olla **useita nimettyjä tilejä** (API-avaimet sekä palveluntarjoajasta riippuen valinnainen organisaatio tai perus-URL).
+Määritä **yksi tai useampi palveluntarjoaja** NVDA:ssa kohdassa **Asetukset -> Asetukset -> AI-Hub**. Jokaisella palveluntarjoajalla voi olla **useita nimettyjä tilejä** (API-avaimet sekä palveluntarjoajasta riippuen valinnainen organisaatio tai perus-URL).
 
 | Palveluntarjoaja | Rooli |
 |----------|------|
@@ -39,7 +39,7 @@ Lisäosa voi lukea API-avaimia **ympäristömuuttujista**, jos ne on asetettu (e
 
 ### Puheesta tekstiksi (litterointi) -taustat
 
-**Mikrofoni-/tiedostolitterointia** varten päätyönkulussa (ei erillisessä OpenAI-litterointityökalussa) voit valita asetusten **AI Hub -> Audio** -osiosta vaihtoehdot **whisper_cpp** (paikallinen), **openai** (Whisper API) ja **mistral**.
+**Mikrofoni-/tiedostolitterointia** varten päätyönkulussa (ei erillisessä OpenAI-litterointityökalussa) voit valita asetusten **AI-Hub -> Audio** -osiosta vaihtoehdot **whisper_cpp** (paikallinen), **openai** (Whisper API) ja **mistral**.
 
 ## Asennus
 
@@ -49,13 +49,13 @@ Lisäosa voi lukea API-avaimia **ympäristömuuttujista**, jos ne on asetettu (e
 ## Ensiasetukset
 
 1. Avaa **NVDA -> Asetukset -> Asetukset**.
-2. Valitse **AI Hub** -kategoria.
+2. Valitse **AI-Hub** -kategoria.
 3. Valitse **API Accounts** -kohdassa **Add account...**.
 4. Valitse tili-ikkunassa palveluntarjoaja, anna tilin nimi ja täytä pakolliset kentät (API-avain useimmille palveluille; base URL **Custom OpenAI**- ja **Ollama**-palveluille, ja Ollama käyttää oletuksena paikallista http://127.0.0.1:11434/v1-osoitetta, jos kenttä on tyhjä).
 5. Tallenna ja lisää halutessasi lisää tilejä, muokkaa olemassa olevia tai poista käyttämättömiä tilejä listasta.
 6. Säädä halutessasi **Audio**, **Chat feedback**, **Advanced** / lämpötila sekä **Auto-save conversation** (oletuksena käytössä).
 
-Kunnes vähintään yksi palveluntarjoajan tili on valmis, päädialogin avaaminen kehottaa lisäämään avaimia AI Hub -asetuksissa.
+Kunnes vähintään yksi palveluntarjoajan tili on valmis, päädialogin avaaminen kehottaa lisäämään avaimia AI-Hub -asetuksissa.
 
 ## Päivittäminen vanhemmista “Open AI” -versioista
 
@@ -66,9 +66,9 @@ Jos olet käyttänyt lisäosan vanhempaa versiota:
 
 Sinun ei tarvitse siirtää tiedostoja käsin, ellei käytössäsi ole mukautettu asennus.
 
-## NVDA-valikko: AI Hub
+## NVDA-valikko: AI-Hub
 
-NVDA-valikossa näkyy **AI Hub** (nimessä myös asennettu versio). Merkinnät sisältävät:
+NVDA-valikossa näkyy **AI-Hub** (nimessä myös asennettu versio). Merkinnät sisältävät:
 
 - **Dokumentaatio** — avaa käyttöoppaan selaimessa (`doc\en\readme.html`).
 - **Päädialogi...** — avaa keskusteluikkunan (`NVDA+G` oletuksena).
@@ -78,7 +78,7 @@ NVDA-valikossa näkyy **AI Hub** (nimessä myös asennettu versio). Merkinnät s
 
 ## Päädialogi
 
-Avaa komennolla **`NVDA+G`** tai AI Hub -valikon **Päädialogi...**-kohdasta.
+Avaa komennolla **`NVDA+G`** tai AI-Hub -valikon **Päädialogi...**-kohdasta.
 
 ### Mitä voit tehdä
 
@@ -107,7 +107,7 @@ Järjestelmäkehote ohjaa mallin toimintaa. Oletuksena on saavutettavuusavustami
 
 ## Keskusteluhistoria
 
-Käytä AI Hub -valikon **Keskusteluhistoria...**-toimintoa tai määritä ele kohdassa **Syöte-eleet -> AI Hub**.
+Käytä AI-Hub -valikon **Keskusteluhistoria...**-toimintoa tai määritä ele kohdassa **Syöte-eleet -> AI-Hub**.
 
 Voit listata, avata, nimetä uudelleen, poistaa ja luoda keskusteluja. Päädialogissa **F2** ja **Ctrl+N** auttavat nykyisen istunnon hallinnassa.
 
@@ -117,7 +117,7 @@ Jos asetuksissa **Tallenna keskustelu automaattisesti** on käytössä (oletus),
 
 ## Kysy kysymys (ääni)
 
-Tällä komennolla **ei ole oletusnäppäintä**. Määritä se kohdassa **Syöte-eleet -> AI Hub**.
+Tällä komennolla **ei ole oletusnäppäintä**. Määritä se kohdassa **Syöte-eleet -> AI-Hub**.
 
 - Ensimmäinen painallus: aloita äänitys.
 - Toinen painallus äänityksen aikana: lopeta ja lähetä.
@@ -132,7 +132,7 @@ Jos päädialogi on kohdistettuna, käytetään sen **nykyistä mallia**; muuten
 
 ## Työkalut-alivalikko
 
-AI Hub -valikon **Työkalut**-kohta avaa palveluntarjoajittain ryhmitellyt dialogit (jokainen voi vaatia vastaavan API-tilin):
+AI-Hub -valikon **Työkalut**-kohta avaa palveluntarjoajittain ryhmitellyt dialogit (jokainen voi vaatia vastaavan API-tilin):
 
 | Valikkoalue | Työkalu |
 |-----------|------|
@@ -141,20 +141,20 @@ AI Hub -valikon **Työkalut**-kohta avaa palveluntarjoajittain ryhmitellyt dialo
 | OpenAI | **TTS...**, **Transcription / Translation...** |
 | Ollama | **Model manager...** |
 
-Jos työkalun palveluntarjoajalle ei ole määritetty tiliä, lisäosa ilmoittaa lisäämään sellaisen AI Hub -asetuksissa.
+Jos työkalun palveluntarjoajalle ei ole määritetty tiliä, lisäosa ilmoittaa lisäämään sellaisen AI-Hub -asetuksissa.
 
 ## Yleiskomennot
 
-Kaikkia oletuseleitä voi muuttaa kohdassa **NVDA -> Asetukset -> Syöte-eleet -> AI Hub**.
+Kaikkia oletuseleitä voi muuttaa kohdassa **NVDA -> Asetukset -> Syöte-eleet -> AI-Hub**.
 
 | Ele | Toiminto |
 |---------|--------|
-| `NVDA+G` | Näytä AI Hub -päädialogi |
+| `NVDA+G` | Näytä AI-Hub -päädialogi |
 | `NVDA+E` | Ota kuvakaappaus ja kuvaile (lisää kuvan istuntoon) |
 | `NVDA+O` | Kuvaile nykyisen navigaattoriobjektin alue |
-| *(ei oletuselettä)* | Keskusteluhistoria. Määritä kohdassa Syöte-eleet -> AI Hub. |
-| *(ei oletuselettä)* | Kysy kysymys (äänitä / lähetä / pysäytä ääni). Määritä kohdassa Syöte-eleet -> AI Hub. |
-| *(ei oletuselettä)* | Vaihda mikrofoniäänityksen ja litteroinnin tila. Määritä kohdassa Syöte-eleet -> AI Hub. |
+| *(ei oletuselettä)* | Keskusteluhistoria. Määritä kohdassa Syöte-eleet -> AI-Hub. |
+| *(ei oletuselettä)* | Kysy kysymys (äänitä / lähetä / pysäytä ääni). Määritä kohdassa Syöte-eleet -> AI-Hub. |
+| *(ei oletuselettä)* | Vaihda mikrofoniäänityksen ja litteroinnin tila. Määritä kohdassa Syöte-eleet -> AI-Hub. |
 
 ## Missä tiedot säilytetään
 
@@ -177,7 +177,7 @@ Kun vaadittu kirjasto puuttuu, `scons` lataa kiinnitetyt wheel-paketit ja purkaa
 
 ## Vianmääritys (lyhyt)
 
-- **"Tiliä ei ole määritetty"** — lisää API-avain valitsemallesi palveluntarjoajalle **AI Hub** -asetuksissa.
+- **"Tiliä ei ole määritetty"** — lisää API-avain valitsemallesi palveluntarjoajalle **AI-Hub** -asetuksissa.
 - **Palveluntarjoaja hylkää liitteen** — tarkista tiedoston tyyppi ja koko; kokeile toista mallia tai palveluntarjoajaa, joka tukee tarvitsemaasi mediaa.
 
-Ongelmat ja kontribuutiot: käytä AI Hub -valikon **GitHub repository** -linkkiä.
+Ongelmat ja kontribuutiot: käytä AI-Hub -valikon **GitHub repository** -linkkiä.

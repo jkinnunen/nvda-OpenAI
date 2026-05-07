@@ -1,10 +1,10 @@
-Als je een aparte desktopervaring met extra workflows wilt, kijk dan naar [BasiliskLLM](https://github.com/SigmaNight/basiliskLLM/) (een zelfstandige app met een minimale NVDA-add-on). AI Hub blijft een volwaardige optie binnen NVDA.
+Als je een aparte desktopervaring met extra workflows wilt, kijk dan naar [BasiliskLLM](https://github.com/SigmaNight/basiliskLLM/) (een zelfstandige app met een minimale NVDA-add-on). AI-Hub blijft een volwaardige optie binnen NVDA.
 
-# AI Hub
+# AI-Hub
 
-**AI Hub** is een NVDA-add-on die je schermlezer verbindt met meerdere API's voor grote taalmodellen (LLM's). Je kunt hem gebruiken voor schrijven, samenvatten, vertaalhulp, beeldanalyse (afbeeldingen en schermafbeeldingen), gesproken vragen, transcriptie en optionele tooldialogen (TTS, OCR en meer) - zonder NVDA te verlaten.
+**AI-Hub** is een NVDA-add-on die je schermlezer verbindt met meerdere API's voor grote taalmodellen (LLM's). Je kunt hem gebruiken voor schrijven, samenvatten, vertaalhulp, beeldanalyse (afbeeldingen en schermafbeeldingen), gesproken vragen, transcriptie en optionele tooldialogen (TTS, OCR en meer) - zonder NVDA te verlaten.
 
-De **pakketnaam** van de add-on in NVDA is nog steeds `openai` (voor compatibiliteit met bestaande installaties). De **weergavenaam** die je in menu's en instellingen ziet, is **AI Hub**.
+De **pakketnaam** van de add-on in NVDA is nog steeds `openai` (voor compatibiliteit met bestaande installaties). De **weergavenaam** die je in menu's en instellingen ziet, is **AI-Hub**.
 
 ## Functies in een oogopslag
 
@@ -12,16 +12,16 @@ De **pakketnaam** van de add-on in NVDA is nog steeds `openai` (voor compatibili
 - **Afbeeldingen en documenten** als bijlagen uit bestanden; **URL's** naar externe bestanden met typecontroles afgestemd op de **geselecteerde provider**.
 - **Slim plakken** in het promptveld: plak bestanden vanaf het klembord, paden uit tekst of een enkele URL (ook beschikbaar via het contextmenu van de prompt). `Ctrl+V` gebruikt dezelfde logica wanneer de prompt focus heeft.
 - **Gespreksopslag en geschiedenis** met hernoemen, verwijderen en opnieuw openen.
-- **Stel een vraag** vanaf elke plek (geen standaardtoets): wijs een gebaar toe in **Invoergebaren → AI Hub** om op te nemen, te verzenden en het antwoord te horen of te lezen.
+- **Stel een vraag** vanaf elke plek (geen standaardtoets): wijs een gebaar toe in **Invoergebaren → AI-Hub** om op te nemen, te verzenden en het antwoord te horen of te lezen.
 - **Globaal beschrijven**: schermafbeelding (`NVDA+E`) of regio van het navigatorobject (`NVDA+O`) wordt naar een chatsessie gestuurd.
-- **Tools**-submenu (onder NVDA → AI Hub): providerspecifieke hulpmiddelen zoals TTS, OCR, spraak-naar-tekst, Lyria-audio en Ollama-modelbeheer.
+- **Tools**-submenu (onder NVDA → AI-Hub): providerspecifieke hulpmiddelen zoals TTS, OCR, spraak-naar-tekst, Lyria-audio en Ollama-modelbeheer.
 - **Reasoning / Web search**-opties verschijnen alleen wanneer het **huidige model** deze ondersteunt (verschilt per provider).
 
 Deze add-on heeft **geen** eigen updatecontrole. **Updates** verlopen via de **officiële Add-on Store van NVDA** wanneer je daarvandaan installeert. Als je handmatig installeert via de [releases-pagina](https://github.com/aaclause/nvda-OpenAI/releases), installeer je nieuwere `.nvda-addon`-builds op dezelfde manier.
 
 ## Ondersteunde providers
 
-Configureer **één of meer providers** in NVDA via **Voorkeuren → Instellingen → AI Hub**. Elke provider kan **meerdere benoemde accounts** bevatten (API-sleutels en, waar van toepassing, een optionele organisatie of basis-URL).
+Configureer **één of meer providers** in NVDA via **Voorkeuren → Instellingen → AI-Hub**. Elke provider kan **meerdere benoemde accounts** bevatten (API-sleutels en, waar van toepassing, een optionele organisatie of basis-URL).
 
 | Provider | Rol |
 |----------|------|
@@ -39,7 +39,7 @@ De add-on kan API-sleutels ophalen uit **omgevingsvariabelen** wanneer die zijn 
 
 ### Backends voor spraak-naar-tekst (transcriptie)
 
-Voor **microfoon-/bestandstranscriptie** binnen de hoofdworkflow (niet de aparte OpenAI-transcriptietool) kun je in de sectie **Audio** van de AI Hub-instellingen kiezen uit **whisper_cpp** (lokaal), **openai** (Whisper API) en **mistral**.
+Voor **microfoon-/bestandstranscriptie** binnen de hoofdworkflow (niet de aparte OpenAI-transcriptietool) kun je in de sectie **Audio** van de AI-Hub-instellingen kiezen uit **whisper_cpp** (lokaal), **openai** (Whisper API) en **mistral**.
 
 ## Installatie
 
@@ -49,13 +49,13 @@ Voor **microfoon-/bestandstranscriptie** binnen de hoofdworkflow (niet de aparte
 ## Eerste configuratie
 
 1. Open **NVDA → Voorkeuren → Instellingen**.
-2. Selecteer de categorie **AI Hub**.
+2. Selecteer de categorie **AI-Hub**.
 3. Kies bij **API Accounts** voor **Add account...**.
 4. Kies in het accountvenster een provider, voer een accountnaam in en vul de verplichte velden in (API-sleutel voor de meeste providers; basis-URL voor **Custom OpenAI** en **Ollama**, waarbij Ollama standaard http://127.0.0.1:11434/v1 gebruikt als dit veld leeg is).
 5. Sla op en voeg optioneel meer accounts toe, bewerk bestaande accounts of verwijder ongebruikte accounts uit de lijst.
 6. Pas optioneel **Audio**, **Chat feedback**, **Advanced** / temperatuur en **Auto-save conversation** (standaard ingeschakeld) aan.
 
-Totdat minstens één provideraccount is ingesteld, vraagt het hoofdvenster je om sleutels toe te voegen in de AI Hub-instellingen.
+Totdat minstens één provideraccount is ingesteld, vraagt het hoofdvenster je om sleutels toe te voegen in de AI-Hub-instellingen.
 
 ## Upgraden vanaf oudere "Open AI"-builds
 
@@ -66,9 +66,9 @@ Als je een oudere versie van deze add-on gebruikte:
 
 Je hoeft bestanden niet handmatig te verplaatsen, tenzij je een aangepaste configuratie gebruikt.
 
-## NVDA-menu: AI Hub
+## NVDA-menu: AI-Hub
 
-In het NVDA-menu vind je **AI Hub** (met de geïnstalleerde versie in het label). De items zijn onder andere:
+In het NVDA-menu vind je **AI-Hub** (met de geïnstalleerde versie in het label). De items zijn onder andere:
 
 - **Documentatie** — opent de gebruikershandleiding in je browser (`doc\en\readme.html`).
 - **Hoofdvenster…** — opent het chatvenster (standaard `NVDA+G`).
@@ -78,7 +78,7 @@ In het NVDA-menu vind je **AI Hub** (met de geïnstalleerde versie in het label)
 
 ## Hoofdvenster
 
-Open met **`NVDA+G`** of **Hoofdvenster…** vanuit het AI Hub-menu.
+Open met **`NVDA+G`** of **Hoofdvenster…** vanuit het AI-Hub-menu.
 
 ### Wat je kunt doen
 
@@ -107,7 +107,7 @@ De systeemprompt stuurt het gedrag van het model. Er is een standaardprompt meeg
 
 ## Gespreksgeschiedenis
 
-Gebruik **Gespreksgeschiedenis…** vanuit het AI Hub-menu, of wijs een gebaar toe onder **Invoergebaren → AI Hub**.
+Gebruik **Gespreksgeschiedenis…** vanuit het AI-Hub-menu, of wijs een gebaar toe onder **Invoergebaren → AI-Hub**.
 
 Je kunt gesprekken bekijken, openen, hernoemen, verwijderen en aanmaken. Vanuit het hoofdvenster helpen **F2** en **Ctrl+N** je bij het beheren van de huidige sessie.
 
@@ -117,7 +117,7 @@ Als **Gesprek automatisch opslaan** is ingeschakeld in de instellingen (standaar
 
 ## Stel een vraag (spraak)
 
-Deze opdracht heeft **geen standaardtoets**. Wijs er een toe onder **Invoergebaren → AI Hub**.
+Deze opdracht heeft **geen standaardtoets**. Wijs er een toe onder **Invoergebaren → AI-Hub**.
 
 - Eerste keer indrukken: opname starten.
 - Tweede keer indrukken tijdens opname: stoppen en verzenden.
@@ -132,7 +132,7 @@ Als het hoofdvenster focus heeft, wordt het **huidige model** daarvan gebruikt; 
 
 ## Tools-submenu
 
-Het item **Tools** onder het AI Hub-menu opent per provider gegroepeerde dialogen (elk kan het bijbehorende API-account vereisen):
+Het item **Tools** onder het AI-Hub-menu opent per provider gegroepeerde dialogen (elk kan het bijbehorende API-account vereisen):
 
 | Menugebied | Tool |
 |-----------|------|
@@ -141,20 +141,20 @@ Het item **Tools** onder het AI Hub-menu opent per provider gegroepeerde dialoge
 | OpenAI | **TTS…**, **Transcriptie / Vertaling…** |
 | Ollama | **Modelbeheer…** |
 
-Als er geen account is geconfigureerd voor de provider van een tool, meldt de add-on dat je er een moet toevoegen in de AI Hub-instellingen.
+Als er geen account is geconfigureerd voor de provider van een tool, meldt de add-on dat je er een moet toevoegen in de AI-Hub-instellingen.
 
 ## Globale opdrachten
 
-Alle standaardgebaren kunnen worden aangepast in **NVDA → Voorkeuren → Invoergebaren → AI Hub**.
+Alle standaardgebaren kunnen worden aangepast in **NVDA → Voorkeuren → Invoergebaren → AI-Hub**.
 
 | Gebaar | Actie |
 |---------|--------|
-| `NVDA+G` | Het AI Hub-hoofdvenster tonen |
+| `NVDA+G` | Het AI-Hub-hoofdvenster tonen |
 | `NVDA+E` | Schermafbeelding maken en beschrijven (voegt afbeelding toe aan een sessie) |
 | `NVDA+O` | De huidige navigatorobjectregio beschrijven |
-| *(geen standaardgebaar)* | Gespreksgeschiedenis. Toewijzen in Invoergebaren → AI Hub. |
-| *(geen standaardgebaar)* | Stel een vraag (opnemen / verzenden / audio stoppen). Toewijzen in Invoergebaren → AI Hub. |
-| *(geen standaardgebaar)* | Microfoonopname en transcriptie in-/uitschakelen. Toewijzen in Invoergebaren → AI Hub. |
+| *(geen standaardgebaar)* | Gespreksgeschiedenis. Toewijzen in Invoergebaren → AI-Hub. |
+| *(geen standaardgebaar)* | Stel een vraag (opnemen / verzenden / audio stoppen). Toewijzen in Invoergebaren → AI-Hub. |
+| *(geen standaardgebaar)* | Microfoonopname en transcriptie in-/uitschakelen. Toewijzen in Invoergebaren → AI-Hub. |
 
 ## Waar gegevens worden opgeslagen
 
@@ -177,7 +177,7 @@ De map `libs` staat bewust in `.gitignore`; bijdragers hoeven meegeleverde artef
 
 ## Probleemoplossing (kort)
 
-- **"Geen account geconfigureerd"** - voeg een API-sleutel toe voor de provider die je hebt geselecteerd in de **AI Hub**-instellingen.
+- **"Geen account geconfigureerd"** - voeg een API-sleutel toe voor de provider die je hebt geselecteerd in de **AI-Hub**-instellingen.
 - **Provider weigert een bijlage** - controleer bestandstype en -grootte; probeer een ander model of een andere provider die de media ondersteunt die je nodig hebt.
 
-Gebruik voor problemen en bijdragen de koppeling naar de **GitHub-repository** vanuit het AI Hub-menu.
+Gebruik voor problemen en bijdragen de koppeling naar de **GitHub-repository** vanuit het AI-Hub-menu.

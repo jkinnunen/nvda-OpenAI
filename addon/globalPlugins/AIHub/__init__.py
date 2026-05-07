@@ -19,7 +19,7 @@ conf = config.conf["AIHub"]
 
 
 class GlobalPlugin(MenuMixin, DialogSessionMixin, AskRecordingMixin, globalPluginHandler.GlobalPlugin):
-	scriptCategory = "AI Hub"
+	scriptCategory = "AI-Hub"
 
 	def __init__(self):
 		super().__init__()
@@ -30,7 +30,7 @@ class GlobalPlugin(MenuMixin, DialogSessionMixin, AskRecordingMixin, globalPlugi
 		self._askAudioPlaying = False
 		self.createMenu()
 		apikeymanager.load(DATA_DIR)
-		log.info("AI Hub initialized. Version: %s. %d providers", ADDON_INFO["version"], len(apikeymanager._managers or []))
+		log.info("AI-Hub initialized. Version: %s. %d providers", ADDON_INFO["version"], len(apikeymanager._managers or []))
 
 	def terminate(self):
 		from .consts import cleanup_temp_dir
@@ -75,7 +75,7 @@ class GlobalPlugin(MenuMixin, DialogSessionMixin, AskRecordingMixin, globalPlugi
 
 	@script(
 		gesture="kb:nvda+g",
-		description=_("Show AI Hub dialog")
+		description=_("Show AI-Hub dialog")
 	)
 	def script_showMainDialog(self, gesture):
 		return DialogSessionMixin.script_showMainDialog(self, gesture)

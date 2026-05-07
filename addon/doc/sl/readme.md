@@ -1,10 +1,10 @@
-Če želite namensko namizno izkušnjo z dodatnimi delovnimi poteki, si oglejte [BasiliskLLM](https://github.com/SigmaNight/basiliskLLM/) (samostojna aplikacija in minimalen dodatek za NVDA). AI Hub ostaja polno funkcionalna možnost znotraj NVDA.
+Če želite namensko namizno izkušnjo z dodatnimi delovnimi poteki, si oglejte [BasiliskLLM](https://github.com/SigmaNight/basiliskLLM/) (samostojna aplikacija in minimalen dodatek za NVDA). AI-Hub ostaja polno funkcionalna možnost znotraj NVDA.
 
-# AI Hub
+# AI-Hub
 
-**AI Hub** je dodatek za NVDA, ki vaš bralnik zaslona poveže z več API-ji velikih jezikovnih modelov (LLM). Uporabljate ga lahko za pisanje, povzemanje, pomoč pri prevajanju, vid (slike in posnetke zaslona), glasovna vprašanja, prepisovanje in izbirna pogovorna okna z orodji (TTS, OCR in drugo) — brez zapuščanja NVDA.
+**AI-Hub** je dodatek za NVDA, ki vaš bralnik zaslona poveže z več API-ji velikih jezikovnih modelov (LLM). Uporabljate ga lahko za pisanje, povzemanje, pomoč pri prevajanju, vid (slike in posnetke zaslona), glasovna vprašanja, prepisovanje in izbirna pogovorna okna z orodji (TTS, OCR in drugo) — brez zapuščanja NVDA.
 
-**Ime paketa** dodatka v NVDA je še vedno `openai` (zaradi združljivosti z obstoječimi namestitvami). **Prikazno ime**, ki ga vidite v menijih in nastavitvah, je **AI Hub**.
+**Ime paketa** dodatka v NVDA je še vedno `openai` (zaradi združljivosti z obstoječimi namestitvami). **Prikazno ime**, ki ga vidite v menijih in nastavitvah, je **AI-Hub**.
 
 ## Funkcije na prvi pogled
 
@@ -12,16 +12,16 @@
 - **Slike in dokumenti** kot priloge iz datotek; **URL-ji** do oddaljenih datotek s preverjanji vrste, usklajenimi z **izbranim ponudnikom**.
 - **Pametno lepljenje** v polju poziva: lepljenje datotek iz odložišča, poti iz besedila ali enega URL-ja (na voljo tudi v kontekstnem meniju poziva). `Ctrl+V` uporablja isto logiko, ko je fokus v pozivu.
 - **Shranjevanje pogovora in zgodovina** s preimenovanjem, brisanjem in ponovnim odpiranjem.
-- **Postavi vprašanje** od koder koli (brez privzete tipke): dodelite gesto v **Vhodne geste → AI Hub** za snemanje, pošiljanje ter poslušanje ali branje odgovora.
+- **Postavi vprašanje** od koder koli (brez privzete tipke): dodelite gesto v **Vhodne geste → AI-Hub** za snemanje, pošiljanje ter poslušanje ali branje odgovora.
 - **Globalni opis**: posnetek zaslona (`NVDA+E`) ali območje navigatorskega predmeta (`NVDA+O`) poslano v sejo klepeta.
-- Podmeni **Orodja** (pod NVDA → AI Hub): pripomočki, specifični za ponudnika, kot so TTS, OCR, govor-v-besedilo, zvok Lyria in upravljanje modelov Ollama.
+- Podmeni **Orodja** (pod NVDA → AI-Hub): pripomočki, specifični za ponudnika, kot so TTS, OCR, govor-v-besedilo, zvok Lyria in upravljanje modelov Ollama.
 - Možnosti **sklepanja / spletnega iskanja** se prikažejo le, ko jih **trenutni model** podpira (različno glede na ponudnika).
 
 Ta dodatek **ne** vključuje lastnega preverjanja posodobitev. **Posodobitve** se obravnavajo prek **uradne trgovine dodatkov NVDA**, ko ga namestite od tam. Če nameščate ročno s [strani izdaj](https://github.com/aaclause/nvda-OpenAI/releases), na enak način namestite novejše gradnje `.nvda-addon`.
 
 ## Podprti ponudniki
 
-V NVDA nastavite **enega ali več ponudnikov** v **Nastavitve → Nastavitve → AI Hub**. Vsak ponudnik lahko vsebuje **več poimenovanih računov** (ključi API, po potrebi tudi organizacija ali osnovni URL).
+V NVDA nastavite **enega ali več ponudnikov** v **Nastavitve → Nastavitve → AI-Hub**. Vsak ponudnik lahko vsebuje **več poimenovanih računov** (ključi API, po potrebi tudi organizacija ali osnovni URL).
 
 | Ponudnik | Vloga |
 |----------|------|
@@ -39,7 +39,7 @@ Dodatek lahko prevzame ključe API iz **okoljskih spremenljivk**, ko so nastavlj
 
 ### Zaledja za govor-v-besedilo (prepisovanje)
 
-Za **prepisovanje mikrofona/datoteke** znotraj glavnega poteka (ne ločenega orodja OpenAI za prepisovanje) lahko v razdelku **Zvok** v nastavitvah AI Hub izbirate med **whisper_cpp** (lokalno), **openai** (API Whisper) in **mistral**.
+Za **prepisovanje mikrofona/datoteke** znotraj glavnega poteka (ne ločenega orodja OpenAI za prepisovanje) lahko v razdelku **Zvok** v nastavitvah AI-Hub izbirate med **whisper_cpp** (lokalno), **openai** (API Whisper) in **mistral**.
 
 ## Namestitev
 
@@ -49,13 +49,13 @@ Za **prepisovanje mikrofona/datoteke** znotraj glavnega poteka (ne ločenega oro
 ## Prva konfiguracija
 
 1. Odprite **NVDA → Nastavitve → Nastavitve**.
-2. Izberite kategorijo **AI Hub**.
+2. Izberite kategorijo **AI-Hub**.
 3. V razdelku **API Accounts** izberite **Add account...**.
 4. V pogovornem oknu računa izberite ponudnika, vnesite ime računa in izpolnite obvezna polja (API ključ za večino ponudnikov; base URL za **Custom OpenAI** in **Ollama**, pri čemer Ollama privzeto uporabi lokalni http://127.0.0.1:11434/v1, če je polje prazno).
 5. Shranite, nato pa po želji dodajte več računov, uredite obstoječe ali odstranite neuporabljene s seznama.
 6. Po želji prilagodite **Audio**, **Chat feedback**, **Advanced** / temperaturo in **Auto-save conversation** (privzeto omogočeno).
 
-Dokler ni pripravljen vsaj en račun ponudnika, vas bo odpiranje glavnega pogovornega okna pozvalo, da dodate ključe v nastavitvah AI Hub.
+Dokler ni pripravljen vsaj en račun ponudnika, vas bo odpiranje glavnega pogovornega okna pozvalo, da dodate ključe v nastavitvah AI-Hub.
 
 ## Nadgradnja s starejših gradenj »Open AI«
 
@@ -66,9 +66,9 @@ Dokler ni pripravljen vsaj en račun ponudnika, vas bo odpiranje glavnega pogovo
 
 Datotek vam ni treba premikati ročno, razen če uporabljate prilagojeno nastavitev.
 
-## Meni NVDA: AI Hub
+## Meni NVDA: AI-Hub
 
-V meniju NVDA boste našli **AI Hub** (z nameščeno različico v oznaki). Vnosi vključujejo:
+V meniju NVDA boste našli **AI-Hub** (z nameščeno različico v oznaki). Vnosi vključujejo:
 
 - **Dokumentacija** — odpre uporabniški vodnik v vašem brskalniku (`doc\en\readme.html`).
 - **Glavno pogovorno okno…** — odpre okno klepeta (privzeto `NVDA+G`).
@@ -78,7 +78,7 @@ V meniju NVDA boste našli **AI Hub** (z nameščeno različico v oznaki). Vnosi
 
 ## Glavno pogovorno okno
 
-Odprite z **`NVDA+G`** ali **Glavno pogovorno okno…** v meniju AI Hub.
+Odprite z **`NVDA+G`** ali **Glavno pogovorno okno…** v meniju AI-Hub.
 
 ### Kaj lahko naredite
 
@@ -107,7 +107,7 @@ Sistemski poziv usmerja vedenje modela. Privzeto je na voljo nastavitev, primern
 
 ## Zgodovina pogovorov
 
-Uporabite **Zgodovina pogovorov…** v meniju AI Hub ali dodelite gesto v **Vhodne geste → AI Hub**.
+Uporabite **Zgodovina pogovorov…** v meniju AI-Hub ali dodelite gesto v **Vhodne geste → AI-Hub**.
 
 Lahko prikažete seznam pogovorov, jih odprete, preimenujete, izbrišete in ustvarite nove. V glavnem pogovornem oknu pri upravljanju trenutne seje pomagata **F2** in **Ctrl+N**.
 
@@ -117,7 +117,7 @@ Lahko prikažete seznam pogovorov, jih odprete, preimenujete, izbrišete in ustv
 
 ## Postavi vprašanje (glas)
 
-Ta ukaz ima **brez privzete tipke**. Dodelite ga v **Vhodne geste → AI Hub**.
+Ta ukaz ima **brez privzete tipke**. Dodelite ga v **Vhodne geste → AI-Hub**.
 
 - Prvi pritisk: začni snemanje.
 - Drugi pritisk med snemanjem: ustavi in pošlji.
@@ -132,7 +132,7 @@ Ta ukaz ima **brez privzete tipke**. Dodelite ga v **Vhodne geste → AI Hub**.
 
 ## Podmeni Orodja
 
-Vnos **Orodja** pod menijem AI Hub odpre pogovorna okna, združena po ponudnikih (vsako lahko zahteva ustrezen račun API):
+Vnos **Orodja** pod menijem AI-Hub odpre pogovorna okna, združena po ponudnikih (vsako lahko zahteva ustrezen račun API):
 
 | Območje menija | Orodje |
 |-----------|------|
@@ -141,20 +141,20 @@ Vnos **Orodja** pod menijem AI Hub odpre pogovorna okna, združena po ponudnikih
 | OpenAI | **TTS…**, **Prepisovanje / Prevajanje…** |
 | Ollama | **Upravitelj modelov…** |
 
-Če za ponudnika orodja ni konfiguriran račun, vam bo dodatek povedal, da ga dodate v nastavitvah AI Hub.
+Če za ponudnika orodja ni konfiguriran račun, vam bo dodatek povedal, da ga dodate v nastavitvah AI-Hub.
 
 ## Globalni ukazi
 
-Vse privzete geste je mogoče spremeniti v **NVDA → Nastavitve → Vhodne geste → AI Hub**.
+Vse privzete geste je mogoče spremeniti v **NVDA → Nastavitve → Vhodne geste → AI-Hub**.
 
 | Gesta | Dejanje |
 |---------|--------|
-| `NVDA+G` | Prikaži glavno pogovorno okno AI Hub |
+| `NVDA+G` | Prikaži glavno pogovorno okno AI-Hub |
 | `NVDA+E` | Posnemi zaslon in opiši (doda sliko v sejo) |
 | `NVDA+O` | Opiši trenutno območje navigatorskega predmeta |
-| *(brez privzete geste)* | Zgodovina pogovorov. Dodelite v Vhodne geste → AI Hub. |
-| *(brez privzete geste)* | Postavi vprašanje (snemaj / pošlji / ustavi zvok). Dodelite v Vhodne geste → AI Hub. |
-| *(brez privzete geste)* | Preklopi snemanje mikrofona in prepisovanje. Dodelite v Vhodne geste → AI Hub. |
+| *(brez privzete geste)* | Zgodovina pogovorov. Dodelite v Vhodne geste → AI-Hub. |
+| *(brez privzete geste)* | Postavi vprašanje (snemaj / pošlji / ustavi zvok). Dodelite v Vhodne geste → AI-Hub. |
+| *(brez privzete geste)* | Preklopi snemanje mikrofona in prepisovanje. Dodelite v Vhodne geste → AI-Hub. |
 
 ## Kje so podatki shranjeni
 
@@ -177,7 +177,7 @@ Mapa `libs` je namenoma ignorirana v gitu; sodelavcem ni treba potrjevati vendor
 
 ## Odpravljanje težav (na kratko)
 
-- **»Ni konfiguriranega računa«** — Dodajte ključ API za ponudnika, ki ste ga izbrali v nastavitvah **AI Hub**.
+- **»Ni konfiguriranega računa«** — Dodajte ključ API za ponudnika, ki ste ga izbrali v nastavitvah **AI-Hub**.
 - **Ponudnik zavrne prilogo** — Preverite vrsto in velikost datoteke; poskusite drug model ali ponudnika, ki podpira medij, ki ga potrebujete.
 
-Za težave in prispevke uporabite povezavo **GitHub repository** v meniju AI Hub.
+Za težave in prispevke uporabite povezavo **GitHub repository** v meniju AI-Hub.

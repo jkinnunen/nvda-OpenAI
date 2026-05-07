@@ -1,10 +1,10 @@
-If you want a dedicated desktop experience with additional workflows, see [BasiliskLLM](https://github.com/SigmaNight/basiliskLLM/) (standalone app plus a minimal NVDA add-on). AI Hub remains a full-featured option inside NVDA.
+If you want a dedicated desktop experience with additional workflows, see [BasiliskLLM](https://github.com/SigmaNight/basiliskLLM/) (standalone app plus a minimal NVDA add-on). AI-Hub remains a full-featured option inside NVDA.
 
-# AI Hub
+# AI-Hub
 
-**AI Hub** is an NVDA add-on that connects your screen reader to multiple large-language-model (LLM) APIs. Use it for writing, summarizing, translation help, vision (images and screenshots), voice questions, transcription, and optional tool dialogs (TTS, OCR, and more)—without leaving NVDA.
+**AI-Hub** is an NVDA add-on that connects your screen reader to multiple large-language-model (LLM) APIs. Use it for writing, summarizing, translation help, vision (images and screenshots), voice questions, transcription, and optional tool dialogs (TTS, OCR, and more)—without leaving NVDA.
 
-The add-on’s **package name** in NVDA is still `openai` (for compatibility with existing installs). The **display name** you see in menus and settings is **AI Hub**.
+The add-on’s **package name** in NVDA is still `openai` (for compatibility with existing installs). The **display name** you see in menus and settings is **AI-Hub**.
 
 ## Features at a glance
 
@@ -12,16 +12,16 @@ The add-on’s **package name** in NVDA is still `openai` (for compatibility wit
 - **Images and documents** as attachments from files; **URLs** to remote files with type checks aligned to the **selected provider**.
 - **Smart paste** in the prompt field: paste files from the clipboard, paths from text, or a single URL (also available from the prompt’s context menu). `Ctrl+V` uses the same logic when the prompt has focus.
 - **Conversation save and history** with rename, delete, and reopen.
-- **Ask a question** from anywhere (no default key): assign a gesture in **Input Gestures → AI Hub** to record, send, and hear or read the answer.
+- **Ask a question** from anywhere (no default key): assign a gesture in **Input Gestures → AI-Hub** to record, send, and hear or read the answer.
 - **Global describe**: screenshot (`NVDA+E`) or navigator object region (`NVDA+O`) sent into a chat session.
-- **Tools** submenu (under NVDA → AI Hub): provider-specific utilities such as TTS, OCR, speech-to-text, Lyria audio, and Ollama model management.
+- **Tools** submenu (under NVDA → AI-Hub): provider-specific utilities such as TTS, OCR, speech-to-text, Lyria audio, and Ollama model management.
 - **Reasoning / web search** options appear only when the **current model** supports them (varies by provider).
 
 This add-on does **not** include its own update checker. **Updates** are handled through **NVDA’s official Add-on Store** when you install from there. If you install manually from the [releases page](https://github.com/aaclause/nvda-OpenAI/releases), install newer `.nvda-addon` builds the same way.
 
 ## Supported providers
 
-Configure **one or more providers** in NVDA **Preferences → Settings → AI Hub**. Each provider can hold **multiple named accounts** (API keys, optional organization or base URL where applicable).
+Configure **one or more providers** in NVDA **Preferences → Settings → AI-Hub**. Each provider can hold **multiple named accounts** (API keys, optional organization or base URL where applicable).
 
 | Provider | Role |
 |----------|------|
@@ -39,7 +39,7 @@ The add-on can pick up API keys from **environment variables** when set (for exa
 
 ### Speech-to-text (transcription) backends
 
-For **microphone / file transcription** inside the main flow (not the separate OpenAI transcription tool), you can choose among **whisper_cpp** (local), **openai** (Whisper API), and **mistral**, under the **Audio** section of AI Hub settings.
+For **microphone / file transcription** inside the main flow (not the separate OpenAI transcription tool), you can choose among **whisper_cpp** (local), **openai** (Whisper API), and **mistral**, under the **Audio** section of AI-Hub settings.
 
 ## Installation
 
@@ -50,13 +50,13 @@ For **microphone / file transcription** inside the main flow (not the separate O
 ## First-time configuration
 
 1. Open **NVDA → Preferences → Settings**.
-2. Select the **AI Hub** category.
+2. Select the **AI-Hub** category.
 3. In **API Accounts**, choose **Add account...**.
 4. In the account dialog, select a provider, enter an account name, and fill the required fields (API key for most providers; base URL for **Custom OpenAI** and **Ollama**, with Ollama defaulting to local `http://127.0.0.1:11434/v1` when empty).
 5. Save, then optionally add more accounts, edit existing ones, or remove unused ones from the accounts list.
 6. Optionally adjust **Audio**, **Chat feedback**, **Advanced** / temperature, and **Auto-save conversation** (enabled by default).
 
-Until at least one provider account is ready, opening the main dialog will prompt you to add keys in AI Hub settings.
+Until at least one provider account is ready, opening the main dialog will prompt you to add keys in AI-Hub settings.
 
 ## Upgrading from older “Open AI” builds
 
@@ -67,9 +67,9 @@ If you used an older version of this add-on:
 
 You do not need to move files manually unless you use a custom setup.
 
-## NVDA menu: AI Hub
+## NVDA menu: AI-Hub
 
-Under the NVDA menu you will find **AI Hub** (with the installed version in the label). Entries include:
+Under the NVDA menu you will find **AI-Hub** (with the installed version in the label). Entries include:
 
 - **Documentation** — opens the user guide in your browser (`doc\en\readme.html`).
 - **Main dialog…** — open the chat window (`NVDA+G` by default).
@@ -79,7 +79,7 @@ Under the NVDA menu you will find **AI Hub** (with the installed version in the 
 
 ## Main dialog
 
-Open with **`NVDA+G`** or **Main dialog…** from the AI Hub menu.
+Open with **`NVDA+G`** or **Main dialog…** from the AI-Hub menu.
 
 ### What you can do
 
@@ -108,7 +108,7 @@ The system prompt steers model behavior. A default suited to accessibility assis
 
 ## Conversation history
 
-Use **Conversation history…** from the AI Hub menu, or assign a gesture under **Input Gestures → AI Hub**.
+Use **Conversation history…** from the AI-Hub menu, or assign a gesture under **Input Gestures → AI-Hub**.
 
 You can list, open, rename, delete, and create conversations. From the main dialog, **F2** and **Ctrl+N** help manage the current session.
 
@@ -118,7 +118,7 @@ If **Auto-save conversation** is enabled in settings (default), the add-on saves
 
 ## Ask a question (voice)
 
-This command has **no default key**. Assign one under **Input Gestures → AI Hub**.
+This command has **no default key**. Assign one under **Input Gestures → AI-Hub**.
 
 - First press: start recording.
 - Second press while recording: stop and send.
@@ -133,7 +133,7 @@ If the main dialog is focused, its **current model** is used; otherwise the add-
 
 ## Tools submenu
 
-The **Tools** entry under the AI Hub menu opens provider-grouped dialogs (each may require the corresponding API account):
+The **Tools** entry under the AI-Hub menu opens provider-grouped dialogs (each may require the corresponding API account):
 
 | Menu area | Tool |
 |-----------|------|
@@ -142,20 +142,20 @@ The **Tools** entry under the AI Hub menu opens provider-grouped dialogs (each m
 | OpenAI | **TTS…**, **Transcription / Translation…** |
 | Ollama | **Model manager…** |
 
-If no account is configured for a tool’s provider, the add-on will tell you to add one in AI Hub settings.
+If no account is configured for a tool’s provider, the add-on will tell you to add one in AI-Hub settings.
 
 ## Global commands
 
-All default gestures can be changed in **NVDA → Preferences → Input Gestures → AI Hub**.
+All default gestures can be changed in **NVDA → Preferences → Input Gestures → AI-Hub**.
 
 | Gesture | Action |
 |---------|--------|
-| `NVDA+G` | Show the AI Hub main dialog |
+| `NVDA+G` | Show the AI-Hub main dialog |
 | `NVDA+E` | Screenshot and describe (adds image to a session) |
 | `NVDA+O` | Describe the current navigator object region |
-| *(no default gesture)* | Conversation history. Assign in Input Gestures → AI Hub. |
-| *(no default gesture)* | Ask a question (record / send / stop audio). Assign in Input Gestures → AI Hub. |
-| *(no default gesture)* | Toggle microphone recording and transcription. Assign in Input Gestures → AI Hub. |
+| *(no default gesture)* | Conversation history. Assign in Input Gestures → AI-Hub. |
+| *(no default gesture)* | Ask a question (record / send / stop audio). Assign in Input Gestures → AI-Hub. |
+| *(no default gesture)* | Toggle microphone recording and transcription. Assign in Input Gestures → AI-Hub. |
 
 ## Where data is stored
 
@@ -178,7 +178,7 @@ The `libs` directory is intentionally git-ignored; contributors do not need to c
 
 ## Troubleshooting (short)
 
-- **“No account configured”** — Add an API key for the provider you selected in **AI Hub** settings.
+- **“No account configured”** — Add an API key for the provider you selected in **AI-Hub** settings.
 - **Provider rejects an attachment** — Check file type and size; try another model or provider that supports the media you need.
 
-For issues and contributions, use the **GitHub repository** link from the AI Hub menu.
+For issues and contributions, use the **GitHub repository** link from the AI-Hub menu.

@@ -35,11 +35,11 @@ addon_info = {
 	# Add-on summary, usually the user visible name of the addon.
 	# Translators: Summary for this add-on
 	# to be shown on installation and add-on information found in Add-ons Manager.
-	"addon_summary": "AI Hub",
+	"addon_summary": "AI-Hub",
 	# Add-on description
 	# Translators: Long description to be shown for this add-on on add-on information from add-ons manager
 	"addon_description": [
-		_("AI Hub is an NVDA add-on that connects your screen reader to multiple AI providers for writing, summarizing, translation, image description, voice questions, and transcription without leaving NVDA."),
+		_("AI-Hub is an NVDA add-on that connects your screen reader to multiple AI providers for writing, summarizing, translation, image description, voice questions, and transcription without leaving NVDA."),
 		"\n",
 		_("It supports OpenAI, Mistral, OpenRouter, Anthropic, xAI, Google, DeepSeek, Custom OpenAI-compatible endpoints, and local Ollama models, with provider-specific tools such as TTS, OCR, and speech-to-text.")
 	],

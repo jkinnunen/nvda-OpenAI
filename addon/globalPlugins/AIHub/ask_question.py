@@ -118,7 +118,7 @@ class AskQuestionThread(threading.Thread):
 			msg = (
 				_("No audio-capable model found. Enable direct audio in settings.")
 				if requires_audio_model
-				else _("No API key configured. Please add one in AI Hub settings.")
+				else _("No API key configured. Please add one in AI-Hub settings.")
 			)
 			queueHandler.queueFunction(queueHandler.eventQueue, ui.message, msg)
 			return

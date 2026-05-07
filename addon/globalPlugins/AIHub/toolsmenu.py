@@ -114,7 +114,7 @@ def open_tool_dialog(parent, tool_def, conversationData=None, plugin=None):
 		if manager and not manager.isReady():
 			provider_label = provider or manager_provider
 			wx.MessageBox(
-				_("No account configured for %s. Please add an account for this provider in AI Hub settings.") % provider_label,
+				_("No account configured for %s. Please add an account for this provider in AI-Hub settings.") % provider_label,
 				"OpenAI",
 				wx.OK | wx.ICON_ERROR,
 			)

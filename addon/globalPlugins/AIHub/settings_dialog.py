@@ -125,7 +125,7 @@ class AccountDialog(wx.Dialog):
 
 
 class SettingsDlg(gui.settingsDialogs.SettingsPanel):
-	title = "AI Hub"
+	title = "AI-Hub"
 
 	def makeSettings(self, settingsSizer):
 		sHelper = gui.guiHelper.BoxSizerHelper(self, sizer=settingsSizer)
@@ -430,12 +430,12 @@ class SettingsDlg(gui.settingsDialogs.SettingsPanel):
 		dlg.Destroy()
 		if data["provider"] == "CustomOpenAI":
 			if not data["base_url"]:
-				gui.messageBox(_("Custom base URL is required for CustomOpenAI accounts."), _("AI Hub"), wx.OK | wx.ICON_ERROR)
+				gui.messageBox(_("Custom base URL is required for CustomOpenAI accounts."), _("AI-Hub"), wx.OK | wx.ICON_ERROR)
 				return
 		elif data["provider"] == "Ollama":
 			pass
 		elif not data["api_key"]:
-			gui.messageBox(_("API key is required."), _("AI Hub"), wx.OK | wx.ICON_ERROR)
+			gui.messageBox(_("API key is required."), _("AI-Hub"), wx.OK | wx.ICON_ERROR)
 			return
 		manager = apikeymanager.get(data["provider"])
 		acc_id = manager.add_account(
@@ -460,12 +460,12 @@ class SettingsDlg(gui.settingsDialogs.SettingsPanel):
 		dlg.Destroy()
 		if updated["provider"] == "CustomOpenAI":
 			if not updated["base_url"]:
-				gui.messageBox(_("Custom base URL is required for CustomOpenAI accounts."), _("AI Hub"), wx.OK | wx.ICON_ERROR)
+				gui.messageBox(_("Custom base URL is required for CustomOpenAI accounts."), _("AI-Hub"), wx.OK | wx.ICON_ERROR)
 				return
 		elif updated["provider"] == "Ollama":
 			pass
 		elif not updated["api_key"]:
-			gui.messageBox(_("API key is required."), _("AI Hub"), wx.OK | wx.ICON_ERROR)
+			gui.messageBox(_("API key is required."), _("AI-Hub"), wx.OK | wx.ICON_ERROR)
 			return
 		if updated["provider"] == entry["provider"]:
 			manager = apikeymanager.get(entry["provider"])

@@ -1,10 +1,10 @@
-Wenn du ein dediziertes Desktop-Erlebnis mit zusätzlichen Workflows möchtest, sieh dir [BasiliskLLM](https://github.com/SigmaNight/basiliskLLM/) an (eigenständige App plus ein minimales NVDA-Add-on). AI Hub bleibt eine voll ausgestattete Option innerhalb von NVDA.
+Wenn du ein dediziertes Desktop-Erlebnis mit zusätzlichen Workflows möchtest, sieh dir [BasiliskLLM](https://github.com/SigmaNight/basiliskLLM/) an (eigenständige App plus ein minimales NVDA-Add-on). AI-Hub bleibt eine voll ausgestattete Option innerhalb von NVDA.
 
-# AI Hub
+# AI-Hub
 
-**AI Hub** ist ein NVDA-Add-on, das deinen Screenreader mit mehreren APIs für große Sprachmodelle (LLM) verbindet. Du kannst es zum Schreiben, Zusammenfassen, für Übersetzungshilfe, Vision (Bilder und Screenshots), Sprachfragen, Transkription und optionale Werkzeugdialoge (TTS, OCR und mehr) nutzen - ohne NVDA zu verlassen.
+**AI-Hub** ist ein NVDA-Add-on, das deinen Screenreader mit mehreren APIs für große Sprachmodelle (LLM) verbindet. Du kannst es zum Schreiben, Zusammenfassen, für Übersetzungshilfe, Vision (Bilder und Screenshots), Sprachfragen, Transkription und optionale Werkzeugdialoge (TTS, OCR und mehr) nutzen - ohne NVDA zu verlassen.
 
-Der **Paketname** des Add-ons in NVDA ist weiterhin `openai` (zur Kompatibilität mit bestehenden Installationen). Der **Anzeigename**, den du in Menüs und Einstellungen siehst, ist **AI Hub**.
+Der **Paketname** des Add-ons in NVDA ist weiterhin `openai` (zur Kompatibilität mit bestehenden Installationen). Der **Anzeigename**, den du in Menüs und Einstellungen siehst, ist **AI-Hub**.
 
 ## Funktionen auf einen Blick
 
@@ -12,16 +12,16 @@ Der **Paketname** des Add-ons in NVDA ist weiterhin `openai` (zur Kompatibilitä
 - **Bilder und Dokumente** als Anhänge aus Dateien; **URLs** zu entfernten Dateien mit Typprüfungen, abgestimmt auf den **ausgewählten Anbieter**.
 - **Smart Paste** im Prompt-Feld: Dateien aus der Zwischenablage, Pfade aus Text oder eine einzelne URL einfügen (auch über das Kontextmenü des Prompts verfügbar). `Ctrl+V` verwendet dieselbe Logik, wenn der Fokus im Prompt liegt.
 - **Konversationsspeicherung und Verlauf** mit Umbenennen, Löschen und Wiederöffnen.
-- **Frage stellen** von überall (keine Standardtaste): Weise eine Geste in **Eingabegesten → AI Hub** zu, um aufzuzeichnen, zu senden und die Antwort zu hören oder zu lesen.
+- **Frage stellen** von überall (keine Standardtaste): Weise eine Geste in **Eingabegesten → AI-Hub** zu, um aufzuzeichnen, zu senden und die Antwort zu hören oder zu lesen.
 - **Globale Beschreibung**: Screenshot (`NVDA+E`) oder Bereich des Navigatorobjekts (`NVDA+O`) wird in eine Chatsitzung gesendet.
-- **Tools**-Untermenü (unter NVDA → AI Hub): anbieterspezifische Hilfsfunktionen wie TTS, OCR, Speech-to-Text, Lyria-Audio und Ollama-Modellverwaltung.
+- **Tools**-Untermenü (unter NVDA → AI-Hub): anbieterspezifische Hilfsfunktionen wie TTS, OCR, Speech-to-Text, Lyria-Audio und Ollama-Modellverwaltung.
 - Optionen für **Reasoning / Web search** erscheinen nur, wenn das **aktuelle Modell** sie unterstützt (je nach Anbieter unterschiedlich).
 
 Dieses Add-on enthält **keinen** eigenen Update-Checker. **Updates** werden über den offiziellen **NVDA Add-on Store** verwaltet, wenn du von dort installierst. Wenn du manuell von der [Releases-Seite](https://github.com/aaclause/nvda-OpenAI/releases) installierst, installiere neuere `.nvda-addon`-Builds auf dieselbe Weise.
 
 ## Unterstützte Anbieter
 
-Konfiguriere **einen oder mehrere Anbieter** in NVDA unter **Einstellungen → AI Hub**. Jeder Anbieter kann **mehrere benannte Konten** enthalten (API-Schlüssel, optional Organisation oder Base-URL, falls zutreffend).
+Konfiguriere **einen oder mehrere Anbieter** in NVDA unter **Einstellungen → AI-Hub**. Jeder Anbieter kann **mehrere benannte Konten** enthalten (API-Schlüssel, optional Organisation oder Base-URL, falls zutreffend).
 
 | Anbieter | Rolle |
 |----------|------|
@@ -49,7 +49,7 @@ Für **Mikrofon-/Dateitranskription** im Hauptablauf (nicht das separate OpenAI-
 ## Ersteinrichtung
 
 1. Öffne **NVDA → Einstellungen**.
-2. Wähle die Kategorie **AI Hub**.
+2. Wähle die Kategorie **AI-Hub**.
 3. In **API Accounts** wähle **Add account...**.
 4. Im Kontodialog wähle einen Anbieter, gib einen Kontonamen ein und fülle die Pflichtfelder aus (API-Schlüssel für die meisten Anbieter; Base-URL für **Custom OpenAI** und **Ollama**, wobei Ollama bei leerem Feld standardmäßig http://127.0.0.1:11434/v1 verwendet).
 5. Speichere und füge optional weitere Konten hinzu, bearbeite bestehende oder entferne ungenutzte Konten aus der Liste.
@@ -66,9 +66,9 @@ Wenn du eine ältere Version dieses Add-ons verwendet hast:
 
 Du musst Dateien nicht manuell verschieben, außer du verwendest eine benutzerdefinierte Einrichtung.
 
-## NVDA-Menü: AI Hub
+## NVDA-Menü: AI-Hub
 
-Im NVDA-Menü findest du **AI Hub** (mit der installierten Version im Eintrag). Einträge umfassen:
+Im NVDA-Menü findest du **AI-Hub** (mit der installierten Version im Eintrag). Einträge umfassen:
 
 - **Documentation** - öffnet das Benutzerhandbuch im Browser (`doc\en\readme.html`).
 - **Main dialog…** - öffnet das Chatfenster (standardmäßig `NVDA+G`).
@@ -107,7 +107,7 @@ Der Systemprompt steuert das Modellverhalten. Ein Standard, der für Unterstütz
 
 ## Konversationsverlauf
 
-Nutze **Conversation history…** aus dem AI-Hub-Menü oder weise eine Geste unter **Eingabegesten → AI Hub** zu.
+Nutze **Conversation history…** aus dem AI-Hub-Menü oder weise eine Geste unter **Eingabegesten → AI-Hub** zu.
 
 Du kannst Konversationen auflisten, öffnen, umbenennen, löschen und neu erstellen. Im Hauptdialog helfen **F2** und **Ctrl+N** bei der Verwaltung der aktuellen Sitzung.
 
@@ -117,7 +117,7 @@ Wenn **Konversation automatisch speichern** in den Einstellungen aktiviert ist (
 
 ## Frage stellen (Sprache)
 
-Dieser Befehl hat **keine Standardtaste**. Weise eine unter **Eingabegesten → AI Hub** zu.
+Dieser Befehl hat **keine Standardtaste**. Weise eine unter **Eingabegesten → AI-Hub** zu.
 
 - Erster Tastendruck: Aufnahme starten.
 - Zweiter Tastendruck während der Aufnahme: stoppen und senden.
@@ -145,16 +145,16 @@ Wenn für den Anbieter eines Werkzeugs kein Konto konfiguriert ist, fordert dich
 
 ## Globale Befehle
 
-Alle Standardgesten können unter **NVDA → Einstellungen → Eingabegesten → AI Hub** geändert werden.
+Alle Standardgesten können unter **NVDA → Einstellungen → Eingabegesten → AI-Hub** geändert werden.
 
 | Geste | Aktion |
 |---------|--------|
 | `NVDA+G` | AI-Hub-Hauptdialog anzeigen |
 | `NVDA+E` | Screenshot erstellen und beschreiben (fügt Bild einer Sitzung hinzu) |
 | `NVDA+O` | Aktuellen Bereich des Navigatorobjekts beschreiben |
-| *(keine Standardgeste)* | Konversationsverlauf. In Eingabegesten → AI Hub zuweisen. |
-| *(keine Standardgeste)* | Frage stellen (aufnehmen / senden / Audio stoppen). In Eingabegesten → AI Hub zuweisen. |
-| *(keine Standardgeste)* | Mikrofonaufnahme und Transkription umschalten. In Eingabegesten → AI Hub zuweisen. |
+| *(keine Standardgeste)* | Konversationsverlauf. In Eingabegesten → AI-Hub zuweisen. |
+| *(keine Standardgeste)* | Frage stellen (aufnehmen / senden / Audio stoppen). In Eingabegesten → AI-Hub zuweisen. |
+| *(keine Standardgeste)* | Mikrofonaufnahme und Transkription umschalten. In Eingabegesten → AI-Hub zuweisen. |
 
 ## Wo Daten gespeichert werden
 
@@ -177,7 +177,7 @@ Das Verzeichnis `libs` wird absichtlich in Git ignoriert; Mitwirkende müssen ke
 
 ## Fehlerbehebung (kurz)
 
-- **„Kein Konto konfiguriert“** - Füge einen API-Schlüssel für den in den **AI Hub**-Einstellungen ausgewählten Anbieter hinzu.
+- **„Kein Konto konfiguriert“** - Füge einen API-Schlüssel für den in den **AI-Hub**-Einstellungen ausgewählten Anbieter hinzu.
 - **Anbieter lehnt einen Anhang ab** - Prüfe Dateityp und -größe; versuche ein anderes Modell oder einen anderen Anbieter, der das benötigte Medium unterstützt.
 
 Für Probleme und Beiträge nutze den Link **GitHub repository** im AI-Hub-Menü.

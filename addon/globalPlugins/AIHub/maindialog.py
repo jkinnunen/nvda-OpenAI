@@ -151,9 +151,9 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 			self.data.pop("system", None)
 		if conversationData:
 			conv_name = conversationData.get("name", _("Untitled conversation"))
-			title = f"{conv_name} - AI Hub"
+			title = f"{conv_name} - AI-Hub"
 		else:
-			title = _("New conversation") + " - AI Hub"
+			title = _("New conversation") + " - AI-Hub"
 		super().__init__(parent, title=title)
 
 		self.Bind(wx.EVT_CHILD_FOCUS, self.onSetFocus)
@@ -648,7 +648,7 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 		if not isinstance(blocks, list):
 			blocks = []
 		conv_name = data.get("name", _("Untitled conversation"))
-		self.SetTitle(f"{conv_name} - AI Hub")
+		self.SetTitle(f"{conv_name} - AI-Hub")
 		# Clear messages control and reset segment chain for a clean load
 		self._clearMessagesSegments()
 		self.firstBlock = None
@@ -753,7 +753,7 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 			)
 			self._conversationId = conv_id
 			if name:
-				self.SetTitle(f"{name} - AI Hub")
+				self.SetTitle(f"{name} - AI-Hub")
 			return True
 		except Exception as err:
 			log.error(f"auto-save conversation: {err}", exc_info=True)
@@ -796,7 +796,7 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 		if not new_name:
 			return
 		if conversations.rename_conversation(self._conversationId, new_name):
-			self.SetTitle(f"{new_name} - AI Hub")
+			self.SetTitle(f"{new_name} - AI-Hub")
 
 	def _onConversationList(self, evt=None):
 		"""Open the conversation history dialog."""
@@ -907,7 +907,7 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 			and not self.conf["images"]["resize"]
 			and not self.conf["images"]["resizeInfoDisplayed"]
 		):
-			msg = _("Be aware that the add-on may auto-resize images before API submission to lower request sizes and costs. Adjust this feature in the AI Hub settings if needed. This message won't show again.")
+			msg = _("Be aware that the add-on may auto-resize images before API submission to lower request sizes and costs. Adjust this feature in the AI-Hub settings if needed. This message won't show again.")
 			gui.messageBox(
 				msg,
 				_("Image resizing"),
@@ -986,7 +986,7 @@ class AIHubDlg(ModelHandlersMixin, ImageHandlersMixin, AudioHandlersMixin, Histo
 					log.error(f"onCancel delete file: {err}", exc_info=True)
 					gui.messageBox(
 						_("Unable to delete the file: %s\nPlease remove it manually.") % path,
-						"AI Hub",
+						"AI-Hub",
 						wx.OK | wx.ICON_ERROR
 					)
 		self.saveData()

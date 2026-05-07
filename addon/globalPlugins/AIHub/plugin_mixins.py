@@ -35,7 +35,7 @@ class MenuMixin:
 		self.submenu = wx.Menu()
 		item = self.submenu.Append(wx.ID_ANY, _("Docu&mentation"), _("Open the documentation of this addon"))
 		gui.mainFrame.sysTrayIcon.Bind(wx.EVT_MENU, self.onDocumentation, item)
-		item = self.submenu.Append(wx.ID_ANY, _("Main d&ialog..."), _("Show the AI Hub dialog"))
+		item = self.submenu.Append(wx.ID_ANY, _("Main d&ialog..."), _("Show the AI-Hub dialog"))
 		gui.mainFrame.sysTrayIcon.Bind(wx.EVT_MENU, self.onShowMainDialog, item)
 		item = self.submenu.Append(wx.ID_ANY, _("Conversation &history..."), _("Manage saved conversations"))
 		gui.mainFrame.sysTrayIcon.Bind(wx.EVT_MENU, self.onShowConversationsManager, item)
@@ -91,7 +91,7 @@ class MenuMixin:
 class DialogSessionMixin:
 	def _showNoAccountConfiguredDialog(self):
 		wx.MessageBox(
-			_("No account is configured yet. Please add a first account in AI Hub settings."),
+			_("No account is configured yet. Please add a first account in AI-Hub settings."),
 			"OpenAI",
 			wx.OK | wx.ICON_ERROR,
 		)
@@ -153,7 +153,7 @@ class DialogSessionMixin:
 
 	@script(
 		gesture="kb:nvda+g",
-		description=_("Show AI Hub dialog")
+		description=_("Show AI-Hub dialog")
 	)
 	def script_showMainDialog(self, gesture):
 		# Always open a new window on NVDA+G.
