@@ -1,18 +1,12 @@
 """Tools menu and registry for single-tool dialogs."""
 
+import importlib
 import addonHandler
 import wx
 from enum import StrEnum, auto
 from logHandler import log
 
 from . import apikeymanager
-from .tool_lyria_dialog import Lyria3ProToolDialog
-from .tool_mistral_ocr_dialog import MistralOCRToolDialog
-from .tool_mistral_transcription_dialog import MistralSpeechToTextToolDialog
-from .tool_ollama_models_dialog import OllamaModelManagerToolDialog
-from .tool_openai_transcription_dialog import OpenAITranscriptionToolDialog
-from .tool_openai_tts_dialog import OpenAITTSToolDialog
-from .tool_voxtral_tts_dialog import VoxtralTTSToolDialog
 
 addonHandler.initTranslation()
 
@@ -27,55 +21,80 @@ class ToolId(StrEnum):
 	OLLAMA_MODEL_MANAGER = auto()
 
 
+# Dialog classes are loaded on first use (menu → open tool), not at addon startup.
 TOOLS_REGISTRY = (
 	{
 		"id": ToolId.VOXTRAL_TTS,
 		"label": _("Voxtral TTS..."),
 		"provider": "Mistral",
 		"manager_provider": "MistralAI",
-		"dialog_cls": VoxtralTTSToolDialog,
+		"dialog_module": ".tool_voxtral_tts_dialog",
+		"dialog_class": "VoxtralTTSToolDialog",
 	},
 	{
 		"id": ToolId.MISTRAL_OCR,
 		"label": _("OCR..."),
 		"provider": "Mistral",
 		"manager_provider": "MistralAI",
-		"dialog_cls": MistralOCRToolDialog,
+		"dialog_module": ".tool_mistral_ocr_dialog",
+		"dialog_class": "MistralOCRToolDialog",
 	},
 	{
 		"id": ToolId.MISTRAL_SPEECH_TO_TEXT,
 		"label": _("Speech to Text..."),
 		"provider": "Mistral",
 		"manager_provider": "MistralAI",
-		"dialog_cls": MistralSpeechToTextToolDialog,
+		"dialog_module": ".tool_mistral_transcription_dialog",
+		"dialog_class": "MistralSpeechToTextToolDialog",
 	},
 	{
 		"id": ToolId.LYRIA_3_PRO,
 		"label": _("Lyria 3 Pro..."),
 		"provider": "Google",
-		"dialog_cls": Lyria3ProToolDialog,
+		"dialog_module": ".tool_lyria_dialog",
+		"dialog_class": "Lyria3ProToolDialog",
 	},
 	{
 		"id": ToolId.OPENAI_TTS,
 		"label": _("TTS..."),
 		"provider": "OpenAI",
-		"dialog_cls": OpenAITTSToolDialog,
+		"dialog_module": ".tool_openai_tts_dialog",
+		"dialog_class": "OpenAITTSToolDialog",
 	},
 	{
 		"id": ToolId.OPENAI_TRANSCRIPTION,
 		"label": _("Transcription / Translation..."),
 		"provider": "OpenAI",
-		"dialog_cls": OpenAITranscriptionToolDialog,
+		"dialog_module": ".tool_openai_transcription_dialog",
+		"dialog_class": "OpenAITranscriptionToolDialog",
 	},
 	{
 		"id": ToolId.OLLAMA_MODEL_MANAGER,
 		"label": _("Model manager..."),
 		"provider": "Ollama",
-		"dialog_cls": OllamaModelManagerToolDialog,
+		"dialog_module": ".tool_ollama_models_dialog",
+		"dialog_class": "OllamaModelManagerToolDialog",
 	},
 )
 
 _OPEN_TOOL_DIALOGS = []
+
+# Relative dialog modules live under globalPlugins.AIHub (parent of this package).
+_AI_HUB_PKG = __package__.rsplit(".", 1)[0] if __package__ and "." in __package__ else "globalPlugins.AIHub"
+
+
+def _resolve_dialog_cls(tool_def):
+	"""Return dialog class, importing the module on first use."""
+	cls = tool_def.get("dialog_cls")
+	if cls is not None:
+		return cls
+	cached = tool_def.get("_resolved_dialog_cls")
+	if cached is not None:
+		return cached
+	mod = importlib.import_module(tool_def["dialog_module"], package=_AI_HUB_PKG)
+	cls = getattr(mod, tool_def["dialog_class"])
+	tool_def["_resolved_dialog_cls"] = cls
+	return cls
 
 
 def _resolve_plugin(parent, plugin=None):
@@ -119,7 +138,7 @@ def open_tool_dialog(parent, tool_def, conversationData=None, plugin=None):
 				wx.OK | wx.ICON_ERROR,
 			)
 			return
-	dialog_cls = tool_def["dialog_cls"]
+	dialog_cls = _resolve_dialog_cls(tool_def)
 	plugin = _resolve_plugin(parent, plugin)
 	dlg = dialog_cls(
 		None,

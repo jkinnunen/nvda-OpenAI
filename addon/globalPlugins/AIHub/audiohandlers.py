@@ -1,5 +1,4 @@
-# coding: UTF-8
-"""Audio list handlers for AIHubDlg."""
+"""Audio list handlers for ConversationDialog."""
 import os
 import wx
 
@@ -71,18 +70,19 @@ class AudioHandlersMixin:
 		if not self.audioPathList:
 			self.audioLabel.Hide()
 			self.audioListCtrl.Hide()
+			self._sync_attachments_section_header()
 			self.Layout()
 			if focusPrompt:
 				self.promptTextCtrl.SetFocus()
 			return
+		self.audioLabel.Show()
+		self.audioListCtrl.Show()
+		self._sync_attachments_section_header()
 		for path in self.audioPathList:
 			path_str = path if isinstance(path, str) else getattr(path, "path", str(path))
 			name = os.path.basename(path_str) if path_str else "?"
 			self.audioListCtrl.Append([name, path_str or ""])
-		self.audioListCtrl.SetItemState(0, wx.LIST_STATE_FOCUSED, wx.LIST_STATE_FOCUSED)
-		self.audioLabel.Show()
-		self.audioListCtrl.Show()
-		self.Layout()
+		self._attachment_list_end_refresh(self.audioListCtrl, focus_prompt_if_empty=False)
 
 	def onAddAudioFromFile(self, evt):
 		dlg = wx.FileDialog(
@@ -135,17 +135,10 @@ class AudioHandlersMixin:
 	def onRemoveSelectedAudio(self, evt):
 		if not self.audioPathList:
 			return
-		items_to_remove = []
-		selected = self.audioListCtrl.GetFirstSelected()
-		while selected != wx.NOT_FOUND:
-			items_to_remove.append(selected)
-			selected = self.audioListCtrl.GetNextSelected(selected)
-		if not items_to_remove:
+		remove_idx = frozenset(self._list_ctrl_selected_indices(self.audioListCtrl))
+		if not remove_idx:
 			return
-		self.audioPathList = [
-			p for i, p in enumerate(self.audioPathList)
-			if i not in items_to_remove
-		]
+		self.audioPathList = [p for i, p in enumerate(self.audioPathList) if i not in remove_idx]
 		self.updateAudioList()
 
 	def onRemoveAllAudio(self, evt):

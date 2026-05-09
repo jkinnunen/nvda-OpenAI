@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Shared Anthropic thinking/effort capability helpers."""
 
 from typing import Dict, Tuple

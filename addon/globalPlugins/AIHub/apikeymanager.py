@@ -31,6 +31,7 @@ _ENV_KEYS = {
 _managers = {}
 _store_cache_by_dir = {}
 _migrated_dirs = set()
+_loaded_data_dir = None
 
 
 def _safe_read_text(path):
@@ -46,31 +47,55 @@ def _empty_store():
 	return {"version": 2, "providers": {}}
 
 
-def _normalize_account(raw):
+def _normalize_ollama_base_url(url):
+	"""Normalize Ollama endpoint to OpenAI-compatible /v1 base."""
+	raw = (url or "").strip()
+	if not raw:
+		host = os.getenv("OLLAMA_HOST", "").strip()
+		if host:
+			raw = host
+	if not raw:
+		return BASE_URLs.get("Ollama", "http://127.0.0.1:11434/v1")
+	if "://" not in raw:
+		raw = f"http://{raw}"
+	raw = raw.rstrip("/")
+	if not raw.lower().endswith("/v1"):
+		raw += "/v1"
+	return raw
+
+
+def _normalize_account(raw, provider=None):
 	if not isinstance(raw, dict):
 		return None
 	acc_id = raw.get("id")
 	api_key = (raw.get("api_key") or "").strip()
 	if not isinstance(acc_id, str):
 		return None
+	if provider in ("CustomOpenAI", "Ollama"):
+		base_url = (raw.get("base_url") or "").strip()
+		if provider == "Ollama":
+			base_url = _normalize_ollama_base_url(base_url)
+	else:
+		# Fixed-endpoint providers: never persist a per-account URL (JSON null).
+		base_url = None
 	return {
 		"id": acc_id,
 		"name": (raw.get("name") or "Account").strip() or "Account",
 		"api_key": api_key,
 		"org_name": (raw.get("org_name") or "").strip(),
 		"org_key": (raw.get("org_key") or "").strip(),
-		"base_url": (raw.get("base_url") or "").strip(),
+		"base_url": base_url,
 	}
 
 
-def _normalize_provider_bucket(raw_bucket):
+def _normalize_provider_bucket(raw_bucket, provider=None):
 	if not isinstance(raw_bucket, dict):
 		return {"active_account_id": None, "accounts": []}
 	accounts_raw = raw_bucket.get("accounts", [])
 	accounts = []
 	if isinstance(accounts_raw, list):
 		for acc in accounts_raw:
-			norm = _normalize_account(acc)
+			norm = _normalize_account(acc, provider)
 			if norm is not None:
 				accounts.append(norm)
 	active = raw_bucket.get("active_account_id")
@@ -108,22 +133,6 @@ class APIKeyManager:
 				return val.strip()
 		return None
 
-	def _normalize_ollama_base_url(self, url):
-		"""Normalize Ollama endpoint to OpenAI-compatible /v1 base."""
-		raw = (url or "").strip()
-		if not raw:
-			host = os.getenv("OLLAMA_HOST", "").strip()
-			if host:
-				raw = host
-		if not raw:
-			return BASE_URLs.get("Ollama", "http://127.0.0.1:11434/v1")
-		if "://" not in raw:
-			raw = f"http://{raw}"
-		raw = raw.rstrip("/")
-		if not raw.lower().endswith("/v1"):
-			raw += "/v1"
-		return raw
-
 	def _load_shared_store(self):
 		if self.data_dir in _store_cache_by_dir:
 			return _store_cache_by_dir[self.data_dir]
@@ -136,11 +145,11 @@ class APIKeyManager:
 					providers = raw.get("providers")
 					if isinstance(providers, dict):
 						for provider in AVAILABLE_PROVIDERS:
-							store["providers"][provider] = _normalize_provider_bucket(providers.get(provider, {}))
+							store["providers"][provider] = _normalize_provider_bucket(providers.get(provider, {}), provider)
 					else:
 						# Graceful support for accidental flat shape.
 						for provider in AVAILABLE_PROVIDERS:
-							store["providers"][provider] = _normalize_provider_bucket(raw.get(provider, {}))
+							store["providers"][provider] = _normalize_provider_bucket(raw.get(provider, {}), provider)
 			except Exception:
 				store = _empty_store()
 		for provider in AVAILABLE_PROVIDERS:
@@ -153,10 +162,10 @@ class APIKeyManager:
 		store.setdefault("version", 2)
 		store.setdefault("providers", {})
 		for provider in AVAILABLE_PROVIDERS:
-			store["providers"][provider] = _normalize_provider_bucket(store["providers"].get(provider, {}))
+			store["providers"][provider] = _normalize_provider_bucket(store["providers"].get(provider, {}), provider)
 		tmp_path = self.accounts_path + ".tmp"
 		with open(tmp_path, "w", encoding="utf-8") as f:
-			json.dump(store, f)
+			json.dump(store, f, indent=2, ensure_ascii=False)
 		os.replace(tmp_path, self.accounts_path)
 		_store_cache_by_dir[self.data_dir] = store
 
@@ -165,7 +174,7 @@ class APIKeyManager:
 		if self.provider not in store["providers"]:
 			store["providers"][self.provider] = {"active_account_id": None, "accounts": []}
 		bucket = store["providers"][self.provider]
-		bucket = _normalize_provider_bucket(bucket)
+		bucket = _normalize_provider_bucket(bucket, self.provider)
 		store["providers"][self.provider] = bucket
 		return bucket
 
@@ -189,7 +198,7 @@ class APIKeyManager:
 			try:
 				with open(pp_path, "r", encoding="utf-8", errors="replace") as f:
 					raw = json.load(f)
-				bucket = _normalize_provider_bucket(raw)
+				bucket = _normalize_provider_bucket(raw, provider)
 				if bucket["accounts"] and not store["providers"][provider]["accounts"]:
 					store["providers"][provider] = bucket
 					changed = True
@@ -216,15 +225,20 @@ class APIKeyManager:
 			if legacy_org and legacy_org.count(":=") == 1:
 				org_name, org_key = legacy_org.split(":=", 1)
 			acc_id = uuid.uuid4().hex
+			legacy_acc = {
+				"id": acc_id,
+				"name": "Default",
+				"api_key": legacy_key,
+				"org_name": (org_name or "").strip(),
+				"org_key": (org_key or "").strip(),
+			}
+			if provider == "Ollama":
+				legacy_acc["base_url"] = _normalize_ollama_base_url("")
+			elif provider != "CustomOpenAI":
+				legacy_acc["base_url"] = None
 			store["providers"][provider] = {
 				"active_account_id": acc_id,
-				"accounts": [{
-					"id": acc_id,
-					"name": "Default",
-					"api_key": legacy_key,
-					"org_name": (org_name or "").strip(),
-					"org_key": (org_key or "").strip(),
-				}],
+				"accounts": [legacy_acc],
 			}
 			changed = True
 			# Remove legacy files only if they were effectively migrated.
@@ -250,7 +264,7 @@ class APIKeyManager:
 		bucket = self._provider_bucket(store)
 		accounts = []
 		for acc in bucket.get("accounts", []):
-			norm = _normalize_account(acc)
+			norm = _normalize_account(acc, self.provider)
 			if norm is not None:
 				accounts.append(norm)
 		if include_env and not accounts and self.provider != "CustomOpenAI":
@@ -262,6 +276,7 @@ class APIKeyManager:
 					"api_key": env_api,
 					"org_name": "",
 					"org_key": "",
+					"base_url": None,
 				})
 		return accounts
 
@@ -308,14 +323,16 @@ class APIKeyManager:
 			"api_key": (api_key or "").strip(),
 			"org_name": (org_name or "").strip(),
 			"org_key": (org_key or "").strip(),
-			"base_url": (base_url or "").strip(),
 		}
-		if self.provider == "Ollama":
-			account["base_url"] = self._normalize_ollama_base_url(account["base_url"])
 		if self.provider == "CustomOpenAI":
+			account["base_url"] = (base_url or "").strip()
 			if not account["base_url"]:
 				raise ValueError("Custom provider URL is required")
-		elif self.provider != "Ollama" and not account["api_key"]:
+		elif self.provider == "Ollama":
+			account["base_url"] = _normalize_ollama_base_url((base_url or "").strip())
+		else:
+			account["base_url"] = None
+		if self.provider != "Ollama" and not account["api_key"]:
 			raise ValueError("API key is required")
 		bucket.setdefault("accounts", []).append(account)
 		if set_active or not bucket.get("active_account_id"):
@@ -342,9 +359,12 @@ class APIKeyManager:
 			if base_url is not None:
 				acc["base_url"] = (base_url or "").strip()
 			if self.provider == "Ollama":
-				acc["base_url"] = self._normalize_ollama_base_url(acc.get("base_url", ""))
-			if self.provider == "CustomOpenAI" and not acc.get("base_url", "").strip():
-				raise ValueError("Custom provider URL is required")
+				acc["base_url"] = _normalize_ollama_base_url(acc.get("base_url") or "")
+			elif self.provider == "CustomOpenAI":
+				if not (acc.get("base_url") or "").strip():
+					raise ValueError("Custom provider URL is required")
+			else:
+				acc["base_url"] = None
 			updated = True
 			break
 		if updated:
@@ -403,9 +423,12 @@ class APIKeyManager:
 			if not isinstance(account, dict):
 				return None
 			value = (account.get("base_url") if account else "") if isinstance(account, dict) else ""
-			return self._normalize_ollama_base_url(value)
-		if account:
-			return (account.get("base_url") or "").strip() or None
+			return _normalize_ollama_base_url(value)
+		if self.provider == "CustomOpenAI":
+			if account and isinstance(account, dict):
+				return (account.get("base_url") or "").strip() or None
+			return None
+		# Fixed cloud URLs from consts (BASE_URLs); ignore any stray base_url in JSON.
 		return None
 
 	def save_api_key(self, key, org=False, org_name=None, account_id=None):
@@ -437,8 +460,12 @@ class APIKeyManager:
 
 
 def load(data_dir: str):
-	"""Initialize API key manager for all providers."""
-	global _managers
+	"""Initialize API key manager for all providers (safe to call more than once for the same directory)."""
+	global _managers, _loaded_data_dir
+	resolved = os.path.abspath(data_dir)
+	if _loaded_data_dir == resolved and _managers:
+		return
+	_loaded_data_dir = resolved
 	for provider in AVAILABLE_PROVIDERS:
 		_managers[provider] = APIKeyManager(data_dir, provider)
 

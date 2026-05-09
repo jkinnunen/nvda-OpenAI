@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Image utilities: screenshots, dimensions, resize. Requires Pillow in libs/."""
 import base64
 import os

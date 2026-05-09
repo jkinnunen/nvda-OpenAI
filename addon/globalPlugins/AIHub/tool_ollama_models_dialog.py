@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Dedicated dialog for Ollama model management actions."""
 
 import json
@@ -10,7 +9,15 @@ import winsound
 import addonHandler
 import wx
 
-from .consts import BASE_URLs, SND_CHAT_RESPONSE_RECEIVED, SND_PROGRESS, stop_progress_sound
+from .consts import (
+	BASE_URLs,
+	SND_CHAT_RESPONSE_RECEIVED,
+	SND_PROGRESS,
+	stop_progress_sound,
+	UI_DIALOG_BORDER_PX,
+	UI_FORM_ROW_BORDER_PX,
+	UI_SECTION_SPACING_PX,
+)
 from .model import clearModelCache
 from .providertools_helpers import add_labeled_factory
 from .tool_dialog_base import ToolDialogBase
@@ -77,7 +84,7 @@ class OllamaModelManagerToolDialog(ToolDialogBase):
 			lambda: wx.TextCtrl(self.formPanel, style=wx.TE_MULTILINE, size=(-1, 140)),
 		)
 		self.insecureCheck = wx.CheckBox(self.formPanel, label=_("Allow insecure registry (pull/push)"))
-		main.Add(self.insecureCheck, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		main.Add(self.insecureCheck, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 
 		self.resultText = add_labeled_factory(
 			self.formPanel,
@@ -94,13 +101,13 @@ class OllamaModelManagerToolDialog(ToolDialogBase):
 		self.openRawBtn.Bind(wx.EVT_BUTTON, self.onShowRaw)
 		self.closeBtn = wx.Button(self.formPanel, id=wx.ID_CLOSE)
 		self.closeBtn.Bind(wx.EVT_BUTTON, self.onClose)
-		buttons.Add(self.runBtn, 0, wx.ALL, 5)
-		buttons.Add(self.openRawBtn, 0, wx.ALL, 5)
-		buttons.Add(self.closeBtn, 0, wx.ALL, 5)
-		main.Add(buttons, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
+		buttons.Add(self.runBtn, 0, wx.ALL, UI_SECTION_SPACING_PX)
+		buttons.Add(self.openRawBtn, 0, wx.ALL, UI_SECTION_SPACING_PX)
+		buttons.Add(self.closeBtn, 0, wx.ALL, UI_SECTION_SPACING_PX)
+		main.Add(buttons, 0, wx.ALIGN_RIGHT | wx.ALL, UI_SECTION_SPACING_PX)
 
 		self.formPanel.SetSizer(main)
-		dialogSizer.Add(self.formPanel, 1, wx.EXPAND | wx.ALL, 6)
+		dialogSizer.Add(self.formPanel, 1, wx.EXPAND | wx.ALL, UI_DIALOG_BORDER_PX)
 		self.SetSizer(dialogSizer)
 		if parent:
 			self.CentreOnParent(wx.BOTH)
@@ -283,7 +290,6 @@ class OllamaModelManagerToolDialog(ToolDialogBase):
 			return
 		action = self.ACTIONS[self.actionChoice.GetSelection()][0]
 		try:
-			# Validate now to fail fast before starting worker thread.
 			self._build_payload(action)
 		except Exception as e:
 			wx.MessageBox(str(e), "OpenAI", wx.OK | wx.ICON_ERROR)

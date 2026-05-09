@@ -19,6 +19,11 @@ SND_CHAT_RESPONSE_RECEIVED = os.path.join(ADDON_DIR, "sounds", "chatResponseRece
 SND_CHAT_RESPONSE_SENT = os.path.join(ADDON_DIR, "sounds", "chatRequestSent.wav")
 SND_PROGRESS = os.path.join(ADDON_DIR, "sounds", "progress.wav")
 
+# Dialog/panel spacing (px) — keep conversation window and tool dialogs visually aligned.
+UI_DIALOG_BORDER_PX = 8
+UI_SECTION_SPACING_PX = 5
+UI_FORM_ROW_BORDER_PX = 6
+
 
 def ensure_dir_exists(directory: str):
 	if not os.path.exists(directory):

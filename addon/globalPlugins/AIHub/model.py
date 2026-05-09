@@ -1,4 +1,3 @@
-# coding: UTF-8
 import json
 import urllib.request
 import urllib.error

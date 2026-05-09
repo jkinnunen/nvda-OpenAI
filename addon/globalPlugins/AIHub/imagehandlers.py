@@ -1,5 +1,4 @@
-# coding: UTF-8
-"""Image list handlers for AIHubDlg."""
+"""Image list handlers for ConversationDialog."""
 import mimetypes
 import os
 import re
@@ -13,9 +12,10 @@ import gui
 from logHandler import log
 
 from .imagehelper import get_image_dimensions, resize_image
-from .imagedlg import ImageFile, ImageFileTypes, URL_PATTERN
+from .image_file import ImageFile, ImageFileTypes, URL_PATTERN
 from .consts import TEMP_DIR
 from .mediastore import persist_local_file
+from .url_safety import build_http_fetch_opener, validate_http_fetch_url
 
 addonHandler.initTranslation()
 
@@ -178,16 +178,18 @@ class ImageHandlersMixin:
 	def addImageToList(self, path, removeAfter=False):
 		if not path:
 			return
+		page = self.get_active_page()
+		pl = page.pathList
 		if isinstance(path, ImageFile):
 			path.path = persist_local_file(path.path, "images", prefix="image", fallback_ext=".png")
-			self.pathList.append(path)
+			pl.append(path)
 		elif isinstance(path, str):
 			stored = persist_local_file(path, "images", prefix="image", fallback_ext=".png")
-			self.pathList.append(ImageFile(stored))
+			pl.append(ImageFile(stored))
 		elif isinstance(path, tuple) and len(path) == 2:
 			location, name = path
 			stored = persist_local_file(location, "images", prefix="image", fallback_ext=".png")
-			self.pathList.append(ImageFile(stored, name=name))
+			pl.append(ImageFile(stored, name=name))
 			if removeAfter and location != stored:
 				self._fileToRemoveAfter.append(location)
 		else:
@@ -248,17 +250,10 @@ class ImageHandlersMixin:
 		if not self.pathList:
 			return
 		focused_item = self.imagesListCtrl.GetFocusedItem()
-		items_to_remove = []
-		selectedItem = self.imagesListCtrl.GetFirstSelected()
-		while selectedItem != wx.NOT_FOUND:
-			items_to_remove.append(selectedItem)
-			selectedItem = self.imagesListCtrl.GetNextSelected(selectedItem)
-		if not items_to_remove:
+		remove_idx = frozenset(self._list_ctrl_selected_indices(self.imagesListCtrl))
+		if not remove_idx:
 			return
-		self.pathList = [
-			path for i, path in enumerate(self.pathList)
-			if i not in items_to_remove
-		]
+		self.pathList = [path for i, path in enumerate(self.pathList) if i not in remove_idx]
 		self.updateImageList()
 		if focused_item == wx.NOT_FOUND:
 			return
@@ -291,10 +286,14 @@ class ImageHandlersMixin:
 		if not self.pathList:
 			self.imagesLabel.Hide()
 			self.imagesListCtrl.Hide()
+			self._sync_attachments_section_header()
 			self.Layout()
 			if focusPrompt:
 				self.promptTextCtrl.SetFocus()
 			return
+		self.imagesLabel.Show()
+		self.imagesListCtrl.Show()
+		self._sync_attachments_section_header()
 		for path in self.pathList:
 			self.imagesListCtrl.Append([
 				path.name,
@@ -303,14 +302,7 @@ class ImageHandlersMixin:
 				f"{path.dimensions[0]}x{path.dimensions[1]}" if isinstance(path.dimensions, tuple) else "N/A",
 				path.description or "N/A"
 			])
-		self.imagesListCtrl.SetItemState(
-			0,
-			wx.LIST_STATE_FOCUSED,
-			wx.LIST_STATE_FOCUSED
-		)
-		self.imagesLabel.Show()
-		self.imagesListCtrl.Show()
-		self.Layout()
+		self._attachment_list_end_refresh(self.imagesListCtrl, focus_prompt_if_empty=False)
 
 	def ensureModelVisionSelected(self):
 		model = self.getCurrentModel()
@@ -400,7 +392,21 @@ class ImageHandlersMixin:
 			)
 			return
 		try:
-			with urllib.request.urlopen(url, timeout=15) as r:
+			validate_http_fetch_url(url)
+		except ValueError:
+			gui.messageBox(
+				_("This URL cannot be opened (unsupported scheme or blocked address)."),
+				_("Invalid URL"),
+				wx.OK | wx.ICON_ERROR,
+			)
+			return
+		try:
+			req = urllib.request.Request(
+				url,
+				headers={"User-Agent": "AI-Hub/NVDA (image URL fetch)"},
+				method="GET",
+			)
+			with build_http_fetch_opener().open(req, timeout=15) as r:
 				if not self.pathList:
 					self.pathList = []
 				content_type = (r.headers.get_content_type() or "").lower().strip()
@@ -457,10 +463,10 @@ class ImageHandlersMixin:
 			return
 
 	def onImageDescriptionFromScreenshot(self, evt):
-		from . import maindialog
-		if maindialog.addToSession and maindialog.addToSession is self:
-			maindialog.addToSession = None
+		from . import conversation_dialog
+		if conversation_dialog.addToSession and conversation_dialog.addToSession is self:
+			conversation_dialog.addToSession = None
 			self.message(_("Screenshot reception disabled"))
 			return
-		maindialog.addToSession = self
+		conversation_dialog.addToSession = self
 		self.message(_("Screenshot reception enabled"))

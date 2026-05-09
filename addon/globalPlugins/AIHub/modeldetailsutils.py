@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Shared helpers to build model details text/HTML."""
 
 from datetime import datetime
@@ -36,7 +35,6 @@ def _format_number(value, decimals=None):
 			return locale.format_string("%d", value, grouping=True)
 		return locale.format_string("%g", float(value), grouping=True)
 	except Exception:
-		# Keep details rendering resilient even if locale formatting fails.
 		if decimals is not None:
 			return f"{float(value):.{decimals}f}"
 		return str(value)
@@ -189,7 +187,6 @@ def build_model_details_html(model):
 	extra = model.extraInfo if isinstance(model.extraInfo, dict) else {}
 	if extra:
 		extra = dict(extra)
-		# Already displayed elsewhere in dedicated sections.
 		for key in ("pricing", "created", "supported_parameters"):
 			extra.pop(key, None)
 		extra = _clean_value(extra) or {}

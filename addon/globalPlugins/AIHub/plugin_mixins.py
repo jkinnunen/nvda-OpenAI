@@ -1,5 +1,10 @@
-"""Mixins used by GlobalPlugin to keep __init__.py focused."""
+"""Mixins used by GlobalPlugin to keep __init__.py focused.
 
+NVDA @script decorators are applied only on GlobalPlugin (__init__.py), not here,
+so each gesture is registered once.
+"""
+
+import ctypes
 import os
 import time
 
@@ -10,15 +15,9 @@ import gui
 import ui
 import wx
 from logHandler import log
-from scriptHandler import script
 
 from . import apikeymanager
-from .ask_question import AskQuestionThread, mci_stop_ask_audio
 from .consts import ADDON_DIR, TEMP_DIR, ensure_temp_dir
-from .imagehelper import save_screenshot
-from .model import getModels
-from .recordthread import RecordThread
-from .toolsmenu import append_tools_submenu
 
 addonHandler.initTranslation()
 
@@ -32,26 +31,31 @@ conf = config.conf["AIHub"]
 
 class MenuMixin:
 	def createMenu(self):
+		from .toolsmenu import append_tools_submenu
+
 		self.submenu = wx.Menu()
-		item = self.submenu.Append(wx.ID_ANY, _("Docu&mentation"), _("Open the documentation of this addon"))
-		gui.mainFrame.sysTrayIcon.Bind(wx.EVT_MENU, self.onDocumentation, item)
-		item = self.submenu.Append(wx.ID_ANY, _("Main d&ialog..."), _("Show the AI-Hub dialog"))
-		gui.mainFrame.sysTrayIcon.Bind(wx.EVT_MENU, self.onShowMainDialog, item)
-		item = self.submenu.Append(wx.ID_ANY, _("Conversation &history..."), _("Manage saved conversations"))
-		gui.mainFrame.sysTrayIcon.Bind(wx.EVT_MENU, self.onShowConversationsManager, item)
+		tray_menu = gui.mainFrame.sysTrayIcon
+		for title, help_text, handler in (
+			(_("Docu&mentation"), _("Open the documentation of this addon"), self.onDocumentation),
+			(_("API &accounts..."), _("Manage API keys and provider accounts"), self.onManageApiAccounts),
+			(_("&Conversation..."), _("Show or focus the AI-Hub conversation window"), self.onShowMainDialog),
+			(_("Conversation &history..."), _("Manage saved conversations"), self.onShowConversationsManager),
+		):
+			item = self.submenu.Append(wx.ID_ANY, title, help_text)
+			tray_menu.Bind(wx.EVT_MENU, handler, item)
 		append_tools_submenu(self.submenu, parent=None, plugin=self)
 
 		self.submenu.AppendSeparator()
 
 		item = self.submenu.Append(wx.ID_ANY, _("Git&Hub repository"), _("Open the GitHub repository of this addon"))
-		gui.mainFrame.sysTrayIcon.Bind(wx.EVT_MENU, self.onGitRepo, item)
+		tray_menu.Bind(wx.EVT_MENU, self.onGitRepo, item)
 
 		self.submenu.AppendSeparator()
 
 		item = self.submenu.Append(wx.ID_ANY, _("BasiliskLLM"), _("Open the BasiliskLLM website"))
-		gui.mainFrame.sysTrayIcon.Bind(wx.EVT_MENU, self.onBasiliskLLM, item)
+		tray_menu.Bind(wx.EVT_MENU, self.onBasiliskLLM, item)
 
-		self.submenu_item = gui.mainFrame.sysTrayIcon.menu.InsertMenu(
+		self.submenu_item = tray_menu.menu.InsertMenu(
 			2,
 			wx.ID_ANY,
 			_("AI &Hub {addon_version}".format(addon_version=ADDON_INFO["version"])),
@@ -78,12 +82,13 @@ class MenuMixin:
 		os.startfile("https://github.com/SigmaNight/basiliskLLM/")
 
 	def onShowConversationsManager(self, evt):
-		from .conversationdlg import show_conversations_manager
+		from .conversations_manager_dialog import show_conversations_manager
 		wx.CallAfter(show_conversations_manager, self)
 
-	@script(
-		description=_("Manage saved conversations")
-	)
+	def onManageApiAccounts(self, evt):
+		from .accounts_dialog import show_accounts_management
+		show_accounts_management(gui.mainFrame)
+
 	def script_showConversationsManager(self, gesture):
 		self.onShowConversationsManager(None)
 
@@ -91,30 +96,51 @@ class MenuMixin:
 class DialogSessionMixin:
 	def _showNoAccountConfiguredDialog(self):
 		wx.MessageBox(
-			_("No account is configured yet. Please add a first account in AI-Hub settings."),
+			_("No account is configured yet. Use API accounts from the AI Hub menu or NVDA Preferences → AI-Hub."),
 			"OpenAI",
 			wx.OK | wx.ICON_ERROR,
 		)
 
-	def _openMainDialog(self, pathList=None, conversationData=None, forceNew=False):
-		"""Create and show a non-modal main dialog instance."""
-		from . import maindialog
+	def _refocusHubWindow(self, dlg):
+		"""Bring the AI-Hub window to the foreground (used after NVDA+G and history open)."""
+		try:
+			dlg.Raise()
+			dlg.Show(True)
+			dlg.SetFocus()
+			api.processPendingEvents()
+			hwnd = dlg.GetHandle()
+			if hwnd:
+				ctypes.windll.user32.SetForegroundWindow(int(hwnd))
+		except Exception:
+			log.debug("Refocus AI-Hub window failed", exc_info=True)
+
+	def _openMainDialog(self, pathList=None, conversationData=None, forceNew=False, openConversationInNewTab=False):
+		"""Create and show a non-modal conversation window."""
+		from . import conversation_dialog
 		client = self.getClient()
 		if not client:
 			self._showNoAccountConfiguredDialog()
 			return
 
-		# Drop stale references first.
 		self._openMainDialogs = [d for d in getattr(self, "_openMainDialogs", []) if d and d.IsShown()]
+		if forceNew and self._openMainDialogs:
+			dlg = self._openMainDialogs[-1]
+			if hasattr(dlg, "_addConversationTab"):
+				dlg._addConversationTab()
+				wx.CallAfter(dlg.promptTextCtrl.SetFocus)
+			self._refocusHubWindow(dlg)
+			return
 		if not forceNew and self._openMainDialogs:
 			dlg = self._openMainDialogs[-1]
 			if conversationData and hasattr(dlg, "_loadConversation"):
-				dlg._loadConversation(conversationData)
-			dlg.Raise()
-			dlg.SetFocus()
+				if openConversationInNewTab and hasattr(dlg, "_openConversationFromHistory"):
+					dlg._openConversationFromHistory(conversationData)
+				else:
+					dlg._loadConversation(conversationData, focus_message_history=True)
+			self._refocusHubWindow(dlg)
 			return
 
-		dlg = maindialog.AIHubDlg(
+		dlg = conversation_dialog.ConversationDialog(
 			gui.mainFrame,
 			client=client,
 			conf=conf,
@@ -134,7 +160,6 @@ class DialogSessionMixin:
 
 		dlg.Bind(wx.EVT_CLOSE, _on_close)
 		dlg.Show()
-		# Keep multiple windows visible instead of perfectly stacking them.
 		if len(self._openMainDialogs) > 1:
 			last = self._openMainDialogs[-2]
 			try:
@@ -142,8 +167,8 @@ class DialogSessionMixin:
 				offset = 26
 				dlg.SetPosition((x + offset, y + offset))
 			except Exception:
-				log.debug("Failed to probe models for provider %s", provider, exc_info=True)
-		dlg.Raise()
+				log.debug("Failed to offset stacked dialog position", exc_info=True)
+		self._refocusHubWindow(dlg)
 
 	def onShowMainDialog(self, evt=None, forceNew=False):
 		if not self.getClient():
@@ -151,24 +176,20 @@ class DialogSessionMixin:
 			return
 		wx.CallAfter(self._openMainDialog, None, None, forceNew)
 
-	@script(
-		gesture="kb:nvda+g",
-		description=_("Show AI-Hub dialog")
-	)
 	def script_showMainDialog(self, gesture):
-		# Always open a new window on NVDA+G.
-		wx.CallAfter(self.onShowMainDialog, None, True)
+		wx.CallAfter(self.onShowMainDialog, None, False)
 
 	def startChatSession(self, pathList):
-		from . import maindialog
+		from . import conversation_dialog
 		instance = None
-		if maindialog.addToSession and isinstance(maindialog.addToSession, maindialog.AIHubDlg):
-			instance = maindialog.addToSession
-		elif maindialog.activeChatDlg and isinstance(maindialog.activeChatDlg, maindialog.AIHubDlg):
-			instance = maindialog.activeChatDlg
+		if conversation_dialog.addToSession and isinstance(conversation_dialog.addToSession, conversation_dialog.ConversationDialog):
+			instance = conversation_dialog.addToSession
+		elif conversation_dialog.activeChatDlg and isinstance(conversation_dialog.activeChatDlg, conversation_dialog.ConversationDialog):
+			instance = conversation_dialog.activeChatDlg
 		if instance:
-			if not instance.pathList:
-				instance.pathList = []
+			page = instance.get_active_page()
+			if not page.pathList:
+				page.pathList = []
 			instance.addImageToList(pathList, True)
 			instance.updateImageList()
 			instance.SetFocus()
@@ -178,11 +199,9 @@ class DialogSessionMixin:
 			return
 		wx.CallAfter(self._openMainDialog, [pathList], None, False)
 
-	@script(
-		gesture="kb:nvda+e",
-		description=_("Take a screenshot and describe it")
-	)
 	def script_recognizeScreen(self, gesture):
+		from .imagehelper import save_screenshot
+
 		if not self.getClient():
 			return ui.message(NO_AUTHENTICATION_KEY_PROVIDED_MSG)
 		now = time.strftime("%Y-%m-%d_-_%H:%M:%S")
@@ -195,11 +214,9 @@ class DialogSessionMixin:
 		name = _("Screenshot %s") % (now.split("_-_")[-1])
 		self.startChatSession((tmpPath, name))
 
-	@script(
-		gesture="kb:nvda+o",
-		description=_("Grab the current navigator object and describe it")
-	)
 	def script_recognizeObject(self, gesture):
+		from .imagehelper import save_screenshot
+
 		if not self.getClient():
 			return ui.message(NO_AUTHENTICATION_KEY_PROVIDED_MSG)
 		now = time.strftime("%Y-%m-%d_-_%H:%M:%S")
@@ -224,11 +241,13 @@ class DialogSessionMixin:
 
 class AskRecordingMixin:
 	def _onAskQuestionTranscription(self, question):
+		from .ask_question import AskQuestionThread
+
 		if not question or not question.strip():
 			return
 		question = question.strip()
-		from . import maindialog
-		dlg = maindialog.activeChatDlg
+		from . import conversation_dialog
+		dlg = conversation_dialog.activeChatDlg
 		if dlg:
 			dlg._askPromptOverride = question
 			if dlg.worker:
@@ -243,6 +262,8 @@ class AskRecordingMixin:
 		AskQuestionThread(client, question=question, conf=conf, plugin=self).start()
 
 	def _onAskQuestionAudio(self, path):
+		from .ask_question import AskQuestionThread
+
 		client = self.getClient()
 		if not client:
 			ui.message(NO_AUTHENTICATION_KEY_PROVIDED_MSG)
@@ -252,11 +273,12 @@ class AskRecordingMixin:
 	def _useDirectAudioForAsk(self, model=None):
 		return bool(model and getattr(model, "audioInput", False))
 
-	@script(
-		description=_("Ask a question via voice: record, send to AI, and play the response")
-	)
 	def script_askQuestion(self, gesture):
-		from . import maindialog
+		from .ask_question import AskQuestionThread, mci_stop_ask_audio
+		from .model import getModels
+		from .recordthread import RecordThread
+		from . import conversation_dialog
+
 		if not self.getClient():
 			return ui.message(NO_AUTHENTICATION_KEY_PROVIDED_MSG)
 		if self._askAudioPlaying:
@@ -269,7 +291,7 @@ class AskRecordingMixin:
 			self.askRecordThread = None
 			return
 
-		dlg = maindialog.activeChatDlg
+		dlg = conversation_dialog.activeChatDlg
 		if dlg:
 			model = dlg.getCurrentModel()
 			if model and self._useDirectAudioForAsk(model):
@@ -317,10 +339,9 @@ class AskRecordingMixin:
 		)
 		self.askRecordThread.start()
 
-	@script(
-		description=_("Toggle the microphone recording and transcribe the audio from anywhere")
-	)
 	def script_toggleRecording(self, gesture):
+		from .recordthread import RecordThread
+
 		if not self.getClient():
 			return ui.message(NO_AUTHENTICATION_KEY_PROVIDED_MSG)
 		if self.recordThread:

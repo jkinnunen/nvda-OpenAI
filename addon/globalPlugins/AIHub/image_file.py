@@ -1,5 +1,4 @@
-# coding: UTF-8
-"""Image file handling for the main dialog: ImageFile, types, display size."""
+"""Image file handling for the conversation window: ImageFile, types, display size."""
 import os
 import re
 import mimetypes

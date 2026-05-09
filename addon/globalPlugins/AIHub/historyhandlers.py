@@ -1,5 +1,4 @@
-# coding: UTF-8
-"""History and message handlers for AIHubDlg."""
+"""History and message handlers for ConversationDialog."""
 import datetime
 import os
 import re
@@ -11,7 +10,7 @@ import ui
 from logHandler import log
 
 from .history import TextSegment
-from .imagedlg import ImageFile, ImageFileTypes, URL_PATTERN
+from .image_file import ImageFile, ImageFileTypes, URL_PATTERN
 from .propertiesutils import aggregate_blocks_usage, build_message_properties_html, format_token_usage_lines
 
 addonHandler.initTranslation()
@@ -53,6 +52,14 @@ class HistoryHandlersMixin:
 			text = block.segmentReasoning.getText() if block.segmentReasoning else (getattr(block, "reasoningText", "") or "")
 			return label, text
 		return "", ""
+
+	def _assistantClipboardPlainText(self, block):
+		_, response_text = self._getBlockTextByKind(block, "response")
+		if not getattr(self, "_showThinkingInHistory", False):
+			return response_text
+		if not (getattr(block, "reasoningText", "") or "").strip():
+			return response_text
+		return f"{self._formatThinkingForHistory(block.reasoningText)}{response_text}"
 
 	def _formatTokenUsage(self, usage: dict) -> list:
 		return format_token_usage_lines(usage, include_unavailable=True)
@@ -378,7 +385,7 @@ class HistoryHandlersMixin:
 		self.message(_("Copied to prompt"))
 
 	def onCopyMessage(self, evt, isHtml=False):
-		from .maindialog import copyToClipAsHTML, render_markdown_html
+		from .conversation_dialog import copyToClipAsHTML, render_markdown_html
 		text = self.messagesTextCtrl.GetStringSelection()
 		msg = _("Copy")
 		if not text:
@@ -389,13 +396,10 @@ class HistoryHandlersMixin:
 			if kind == "prompt":
 				label_text, text = self._getBlockTextByKind(block, "prompt")
 				msg = _("Copy prompt")
-			elif kind in ("response", "reasoning"):
-				# Keep Ctrl+C aligned to prompt/response copy only.
-				label_text, text = self._getBlockTextByKind(block, "response")
-				msg = _("Copy response")
 			else:
-				label_text, text = self._getBlockTextByKind(block, "response")
-				msg = _("Copy response")
+				text = self._assistantClipboardPlainText(block)
+				has_reasoning = bool((getattr(block, "reasoningText", "") or "").strip())
+				msg = _("Copy assistant message") if getattr(self, "_showThinkingInHistory", False) and has_reasoning else _("Copy response")
 		if isHtml:
 			text = render_markdown_html(text)
 			copyToClipAsHTML(text)
@@ -433,7 +437,7 @@ class HistoryHandlersMixin:
 		self.message(_("Block deleted"))
 
 	def onWebviewMessage(self, evt, isHtml=False):
-		from .maindialog import render_markdown_html
+		from .conversation_dialog import render_markdown_html
 		segment, block = self._getCurrentSegmentBlock()
 		if segment is None:
 			return

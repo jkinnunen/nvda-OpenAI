@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Reusable transcription helpers: provider resolution, text extraction."""
 
 

@@ -1,4 +1,4 @@
-﻿import os
+import os
 import addonHandler
 import config
 import globalPluginHandler
@@ -10,7 +10,7 @@ from . import configspec
 from .apiclient import OpenAIClient
 from .consts import ADDON_DIR, BASE_URLs, DATA_DIR
 from .plugin_mixins import AskRecordingMixin, DialogSessionMixin, MenuMixin
-from .settings_dialog import SettingsDlg
+from .settings_dialog import AIHubSettingsPanel
 
 addonHandler.initTranslation()
 ROOT_ADDON_DIR = "\\".join(ADDON_DIR.split(os.sep)[:-2])
@@ -23,7 +23,7 @@ class GlobalPlugin(MenuMixin, DialogSessionMixin, AskRecordingMixin, globalPlugi
 
 	def __init__(self):
 		super().__init__()
-		gui.settingsDialogs.NVDASettingsDialog.categoryClasses.append(SettingsDlg)
+		gui.settingsDialogs.NVDASettingsDialog.categoryClasses.append(AIHubSettingsPanel)
 		self._openMainDialogs = []
 		self.recordThread = None
 		self.askRecordThread = None
@@ -51,8 +51,8 @@ class GlobalPlugin(MenuMixin, DialogSessionMixin, AskRecordingMixin, globalPlugi
 			mci_stop_ask_audio()
 			self._askAudioPlaying = False
 		cleanup_temp_dir()
-		if SettingsDlg in gui.settingsDialogs.NVDASettingsDialog.categoryClasses:
-			gui.settingsDialogs.NVDASettingsDialog.categoryClasses.remove(SettingsDlg)
+		if AIHubSettingsPanel in gui.settingsDialogs.NVDASettingsDialog.categoryClasses:
+			gui.settingsDialogs.NVDASettingsDialog.categoryClasses.remove(AIHubSettingsPanel)
 		if getattr(self, "submenu_item", None):
 			gui.mainFrame.sysTrayIcon.menu.DestroyItem(self.submenu_item)
 		super().terminate()
@@ -75,39 +75,39 @@ class GlobalPlugin(MenuMixin, DialogSessionMixin, AskRecordingMixin, globalPlugi
 
 	@script(
 		gesture="kb:nvda+g",
-		description=_("Show AI-Hub dialog")
+		description=_("Show or focus the AI-Hub conversation window"),
 	)
 	def script_showMainDialog(self, gesture):
-		return DialogSessionMixin.script_showMainDialog(self, gesture)
+		super().script_showMainDialog(gesture)
 
 	@script(
 		gesture="kb:nvda+e",
-		description=_("Take a screenshot and describe it")
+		description=_("Take a screenshot and describe it"),
 	)
 	def script_recognizeScreen(self, gesture):
-		return DialogSessionMixin.script_recognizeScreen(self, gesture)
+		super().script_recognizeScreen(gesture)
 
 	@script(
 		gesture="kb:nvda+o",
-		description=_("Grab the current navigator object and describe it")
+		description=_("Grab the current navigator object and describe it"),
 	)
 	def script_recognizeObject(self, gesture):
-		return DialogSessionMixin.script_recognizeObject(self, gesture)
+		super().script_recognizeObject(gesture)
 
 	@script(
-		description=_("Manage saved conversations")
+		description=_("Manage saved conversations"),
 	)
 	def script_showConversationsManager(self, gesture):
-		return MenuMixin.script_showConversationsManager(self, gesture)
+		super().script_showConversationsManager(gesture)
 
 	@script(
-		description=_("Ask a question via voice: record, send to AI, and play the response")
+		description=_("Ask a question via voice: record, send to AI, and play the response"),
 	)
 	def script_askQuestion(self, gesture):
-		return AskRecordingMixin.script_askQuestion(self, gesture)
+		super().script_askQuestion(gesture)
 
 	@script(
-		description=_("Toggle the microphone recording and transcribe the audio from anywhere")
+		description=_("Toggle the microphone recording and transcribe the audio from anywhere"),
 	)
 	def script_toggleRecording(self, gesture):
-		return AskRecordingMixin.script_toggleRecording(self, gesture)
+		super().script_toggleRecording(gesture)

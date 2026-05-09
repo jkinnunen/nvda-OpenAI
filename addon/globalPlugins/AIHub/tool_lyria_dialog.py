@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Dedicated dialog for Google Lyria 3 Pro."""
 
 import base64
@@ -13,7 +12,14 @@ import wx
 from logHandler import log
 
 from .conversations import ConversationFormat
-from .consts import SND_CHAT_RESPONSE_RECEIVED, SND_PROGRESS, stop_progress_sound
+from .consts import (
+	SND_CHAT_RESPONSE_RECEIVED,
+	SND_PROGRESS,
+	stop_progress_sound,
+	UI_DIALOG_BORDER_PX,
+	UI_FORM_ROW_BORDER_PX,
+	UI_SECTION_SPACING_PX,
+)
 from .mediastore import build_media_path
 from .providertools_helpers import add_labeled_factory, extract_audio_b64, safe_float, safe_int
 from .tool_dialog_base import ToolDialogBase
@@ -51,7 +57,7 @@ class Lyria3ProToolDialog(ToolDialogBase):
 		)
 		self.openGeneratedAudioBtn = wx.Button(self.formPanel, label=_("Open generated audio"))
 		self.openGeneratedAudioBtn.Bind(wx.EVT_BUTTON, self.onOpenGeneratedAudio)
-		main.Add(self.openGeneratedAudioBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		main.Add(self.openGeneratedAudioBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		self.negativePromptText = add_labeled_factory(
 			self.formPanel,
 			main,
@@ -120,12 +126,12 @@ class Lyria3ProToolDialog(ToolDialogBase):
 		self.bind_ctrl_enter_submit(self.onRun)
 		self.closeBtn = wx.Button(self.formPanel, id=wx.ID_CLOSE)
 		self.closeBtn.Bind(wx.EVT_BUTTON, self.onClose)
-		buttons.Add(self.runBtn, 0, wx.ALL, 5)
-		buttons.Add(self.closeBtn, 0, wx.ALL, 5)
-		main.Add(buttons, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
+		buttons.Add(self.runBtn, 0, wx.ALL, UI_SECTION_SPACING_PX)
+		buttons.Add(self.closeBtn, 0, wx.ALL, UI_SECTION_SPACING_PX)
+		main.Add(buttons, 0, wx.ALIGN_RIGHT | wx.ALL, UI_SECTION_SPACING_PX)
 
 		self.formPanel.SetSizer(main)
-		dialogSizer.Add(self.formPanel, 1, wx.EXPAND | wx.ALL, 6)
+		dialogSizer.Add(self.formPanel, 1, wx.EXPAND | wx.ALL, UI_DIALOG_BORDER_PX)
 		self.SetSizer(dialogSizer)
 		if parent:
 			self.CentreOnParent(wx.BOTH)
@@ -155,7 +161,6 @@ class Lyria3ProToolDialog(ToolDialogBase):
 			ctrl.Enable(not busy)
 
 	def _try_lyria_generate_via_openai_compat(self, account_id, model, prompt, negative_prompt, options):
-		# Kept for compatibility fallback; primary path is Gemini generateContent.
 		self.configure_client(account_id)
 		user_prompt = prompt
 		if negative_prompt:
@@ -176,10 +181,6 @@ class Lyria3ProToolDialog(ToolDialogBase):
 		return None
 
 	def _try_lyria_generate_via_gemini_api(self, api_key, model, prompt, negative_prompt, options):
-		"""
-		Use Gemini generateContent API for Lyria models.
-		Lyria requires responseModalities including both AUDIO and TEXT.
-		"""
 		segments = [prompt.strip()]
 		dur = options.get("duration_seconds")
 		if isinstance(dur, int) and dur > 0:
@@ -263,7 +264,6 @@ class Lyria3ProToolDialog(ToolDialogBase):
 			try:
 				result = self._try_lyria_generate_via_gemini_api(api_key, model, prompt, negative, options)
 			except Exception:
-				# Fallback for compatibility.
 				result = self._try_lyria_generate_via_openai_compat(account_id, model, prompt, negative, options)
 		except Exception as e:
 			err = e

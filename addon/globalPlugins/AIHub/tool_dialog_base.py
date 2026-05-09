@@ -14,7 +14,12 @@ addonHandler.initTranslation()
 
 class ToolDialogBase(wx.Dialog):
 	def __init__(self, parent, title, provider, size=(760, 620), parentDialog=None, plugin=None):
-		super().__init__(parent, title=title, size=size)
+		super().__init__(
+			parent,
+			title=title,
+			size=size,
+			style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+		)
 		self.parentDialog = parentDialog or parent
 		self.plugin = plugin or getattr(self.parentDialog, "_plugin", None)
 		self.conf = config.conf["AIHub"]

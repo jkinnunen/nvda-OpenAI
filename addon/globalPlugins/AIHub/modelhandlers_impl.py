@@ -1,5 +1,4 @@
-# coding: UTF-8
-"""Model/account list handlers for AIHubDlg."""
+"""Model/account list handlers for ConversationDialog."""
 
 import wx
 
@@ -27,6 +26,11 @@ MODEL_SORT_DEFAULT = "created"
 
 
 class ModelHandlersMixin:
+	def _effective_advanced_mode(self):
+		"""Per-session advanced sampling UI (temperature, top-p, stream, debug)."""
+		cb = getattr(self, "advancedSamplingCheckBox", None)
+		return bool(cb is not None and cb.IsChecked())
+
 	def _modelKey(self, model):
 		return f"{model.provider}:{model.id}"
 
@@ -76,25 +80,51 @@ class ModelHandlersMixin:
 			ui.message(msg)
 		return None
 
-	def _selectAccount(self, account_key):
+	def _selectAccountOnList(self, lst, account_key):
 		if not account_key:
 			return False
-		account_key = account_key.lower()
-		for i in range(self.accountListCtrl.GetCount()):
-			acc = self.accountListCtrl.GetClientData(i)
-			if acc and acc.get("key", "").lower() == account_key:
-				self.accountListCtrl.SetSelection(i)
+		account_key_norm = account_key.lower()
+		for i in range(lst.GetCount()):
+			acc = lst.GetClientData(i)
+			if acc and acc.get("key", "").lower() == account_key_norm:
+				lst.SetSelection(i)
 				return True
 		return False
 
+	def _selectAccount(self, account_key):
+		return self._selectAccountOnList(self.accountListCtrl, account_key)
+
 	def _refreshAccountsList(self, account_to_select=None):
 		self._loadAccounts()
-		self.accountListCtrl.Clear()
-		for account in self._accounts:
-			self.accountListCtrl.Append(self._accountLabel(account), account)
-		selector = account_to_select or self.data.get("lastAccountKey")
-		if not self._selectAccount(selector) and self.accountListCtrl.GetCount():
-			self.accountListCtrl.SetSelection(0)
+		notebook = getattr(self, "notebook", None)
+		if notebook is None or notebook.GetPageCount() <= 0:
+			return
+		active_idx = notebook.GetSelection()
+		if active_idx < 0:
+			active_idx = 0
+		fallback = account_to_select or self.data.get("lastAccountKey")
+		for ti in range(notebook.GetPageCount()):
+			page = notebook.GetPage(ti)
+			lst = page.accountListCtrl
+			lst.Clear()
+			for account in self._accounts:
+				lst.Append(self._accountLabel(account), account)
+			if ti == active_idx:
+				sel = fallback
+			else:
+				sel = (getattr(page, "conversationAccountKey", None) or "").strip() or fallback
+			if not self._selectAccountOnList(lst, sel) and lst.GetCount():
+				lst.SetSelection(0)
+
+	def _reload_models_for_current_account(self, model_to_select=None):
+		"""Load `self._models` for the selected account and fill the active tab's model list."""
+		account = self.getCurrentAccount()
+		if not account:
+			self._models = []
+			self._refreshModelsList(model_to_select=model_to_select)
+			return
+		self._models = getModels(account["provider"], account_id=account.get("id"))
+		self._refreshModelsList(model_to_select=model_to_select)
 
 	def onAccountChange(self, evt):
 		account = self.getCurrentAccount()
@@ -105,17 +135,20 @@ class ModelHandlersMixin:
 		if self.data.get("lastAccountKey") != account["key"]:
 			self.data["lastAccountKey"] = account["key"]
 			self.saveData(True)
-		self._models = getModels(account["provider"], account_id=account.get("id"))
-		self._refreshModelsList()
+		self._reload_models_for_current_account()
 		self.onModelChange(None)
 
 	def getCurrentModel(self):
 		if not hasattr(self, "modelsListCtrl"):
 			return None
-		idx = self.modelsListCtrl.GetSelection()
+		try:
+			lst = self.modelsListCtrl
+		except Exception:
+			return None
+		idx = lst.GetSelection()
 		if idx == wx.NOT_FOUND:
 			return self._models[0] if self._models else None
-		return self.modelsListCtrl.GetClientData(idx)
+		return lst.GetClientData(idx)
 
 	def _requireModel(self, modal=False):
 		model = self.getCurrentModel()
@@ -135,16 +168,17 @@ class ModelHandlersMixin:
 	def _selectModel(self, selector):
 		if not selector:
 			return False
+		lst = self.modelsListCtrl
 		selector_norm = selector.lower() if isinstance(selector, str) else selector
-		for i in range(self.modelsListCtrl.GetCount()):
-			model = self.modelsListCtrl.GetClientData(i)
+		for i in range(lst.GetCount()):
+			model = lst.GetClientData(i)
 			if not model:
 				continue
 			if selector_norm == model.id.lower() or selector == self._modelKey(model):
-				self.modelsListCtrl.SetSelection(i)
+				lst.SetSelection(i)
 				return True
 			if isinstance(selector_norm, str) and "/" in selector_norm and selector_norm.endswith("/" + model.id.lower()):
-				self.modelsListCtrl.SetSelection(i)
+				lst.SetSelection(i)
 				return True
 		return False
 
@@ -231,14 +265,15 @@ class ModelHandlersMixin:
 			self.saveData(True)
 
 	def _refreshModelsList(self, model_to_select=None):
-		self.modelsListCtrl.Clear()
+		lst = self.modelsListCtrl
+		lst.Clear()
 		if not self._models:
 			return
 		for model in self._sortModelsBySetting(self._models):
-			self.modelsListCtrl.Append(self._formatModelLabel(model), model)
+			lst.Append(self._formatModelLabel(model), model)
 		selector = model_to_select or self._getDefaultSelection()
-		if not self._selectModel(selector) and self.modelsListCtrl.GetCount():
-			self.modelsListCtrl.SetSelection(0)
+		if not self._selectModel(selector) and lst.GetCount():
+			lst.SetSelection(0)
 
 	def onModelChange(self, evt):
 		model = self.getCurrentModel()
@@ -297,7 +332,7 @@ class ModelHandlersMixin:
 			self.webSearchCheckBox.Show(False)
 			self.webSearchCheckBox.SetValue(False)
 
-		if self.conf["advancedMode"]:
+		if self._effective_advanced_mode():
 			if "temperature" in model.supportedParameters:
 				self.temperatureSpinCtrl.Enable(True)
 				self.temperatureLabel.Enable(True)
@@ -324,8 +359,116 @@ class ModelHandlersMixin:
 				self.topPSpinCtrl.Enable(False)
 				self.topPLabel.Show(False)
 				self.topPSpinCtrl.Show(False)
-	def showModelDetails(self, evt=None):
-		model = self._requireModel()
+			if "seed" in model.supportedParameters:
+				self.advancedSeedSpinCtrl.Enable(True)
+				self.advancedSeedLabel.Enable(True)
+				self.advancedSeedSpinCtrl.Show(True)
+				self.advancedSeedLabel.Show(True)
+				key_seed = "seed_%s" % model.id
+				if key_seed in self.data:
+					try:
+						self.advancedSeedSpinCtrl.SetValue(int(self.data[key_seed]))
+					except Exception:
+						self.advancedSeedSpinCtrl.SetValue(-1)
+				else:
+					self.advancedSeedSpinCtrl.SetValue(-1)
+			else:
+				self.advancedSeedSpinCtrl.Enable(False)
+				self.advancedSeedLabel.Enable(False)
+				self.advancedSeedSpinCtrl.Show(False)
+				self.advancedSeedLabel.Show(False)
+			if "top_k" in model.supportedParameters:
+				self.advancedTopKSpinCtrl.Enable(True)
+				self.advancedTopKLabel.Enable(True)
+				self.advancedTopKSpinCtrl.Show(True)
+				self.advancedTopKLabel.Show(True)
+				key_tk = "top_k_%s" % model.id
+				if key_tk in self.data:
+					try:
+						self.advancedTopKSpinCtrl.SetValue(int(self.data[key_tk]))
+					except Exception:
+						self.advancedTopKSpinCtrl.SetValue(0)
+				else:
+					self.advancedTopKSpinCtrl.SetValue(0)
+			else:
+				self.advancedTopKSpinCtrl.Enable(False)
+				self.advancedTopKLabel.Enable(False)
+				self.advancedTopKSpinCtrl.Show(False)
+				self.advancedTopKLabel.Show(False)
+			if "stop" in model.supportedParameters:
+				self.advancedStopTextCtrl.Enable(True)
+				self.advancedStopLabel.Enable(True)
+				self.advancedStopTextCtrl.Show(True)
+				self.advancedStopLabel.Show(True)
+				key_stop = "stop_%s" % model.id
+				if key_stop in self.data:
+					self.advancedStopTextCtrl.SetValue(str(self.data[key_stop]))
+				else:
+					self.advancedStopTextCtrl.SetValue("")
+			else:
+				self.advancedStopTextCtrl.Enable(False)
+				self.advancedStopLabel.Enable(False)
+				self.advancedStopTextCtrl.Show(False)
+				self.advancedStopLabel.Show(False)
+			if "frequency_penalty" in model.supportedParameters:
+				self.advancedFreqPenaltySpinCtrl.Enable(True)
+				self.advancedFreqPenaltyLabel.Enable(True)
+				self.advancedFreqPenaltySpinCtrl.Show(True)
+				self.advancedFreqPenaltyLabel.Show(True)
+				key_fp = "frequency_penalty_%s" % model.id
+				if key_fp in self.data:
+					try:
+						self.advancedFreqPenaltySpinCtrl.SetValue(int(self.data[key_fp]))
+					except Exception:
+						self.advancedFreqPenaltySpinCtrl.SetValue(0)
+				else:
+					self.advancedFreqPenaltySpinCtrl.SetValue(0)
+			else:
+				self.advancedFreqPenaltySpinCtrl.Enable(False)
+				self.advancedFreqPenaltyLabel.Enable(False)
+				self.advancedFreqPenaltySpinCtrl.Show(False)
+				self.advancedFreqPenaltyLabel.Show(False)
+			if "presence_penalty" in model.supportedParameters:
+				self.advancedPresPenaltySpinCtrl.Enable(True)
+				self.advancedPresPenaltyLabel.Enable(True)
+				self.advancedPresPenaltySpinCtrl.Show(True)
+				self.advancedPresPenaltyLabel.Show(True)
+				key_pp = "presence_penalty_%s" % model.id
+				if key_pp in self.data:
+					try:
+						self.advancedPresPenaltySpinCtrl.SetValue(int(self.data[key_pp]))
+					except Exception:
+						self.advancedPresPenaltySpinCtrl.SetValue(0)
+				else:
+					self.advancedPresPenaltySpinCtrl.SetValue(0)
+			else:
+				self.advancedPresPenaltySpinCtrl.Enable(False)
+				self.advancedPresPenaltyLabel.Enable(False)
+				self.advancedPresPenaltySpinCtrl.Show(False)
+				self.advancedPresPenaltyLabel.Show(False)
+		else:
+			for w in (
+				self.temperatureLabel, self.temperatureSpinCtrl,
+				self.topPLabel, self.topPSpinCtrl,
+				self.advancedSeedLabel, self.advancedSeedSpinCtrl,
+				self.advancedTopKLabel, self.advancedTopKSpinCtrl,
+				self.advancedStopLabel, self.advancedStopTextCtrl,
+				self.advancedFreqPenaltyLabel, self.advancedFreqPenaltySpinCtrl,
+				self.advancedPresPenaltyLabel, self.advancedPresPenaltySpinCtrl,
+			):
+				try:
+					w.Hide()
+				except Exception:
+					pass
+		if not getattr(self, "_sync_suppress_tab_capture", False):
+			if getattr(self, "notebook", None):
+				try:
+					self._captureConversationChromeToPage(self.get_active_page())
+				except Exception:
+					pass
+	def showModelDetails(self, evt=None, model=None):
+		if model is None:
+			model = self._requireModel()
 		if not model:
 			return
 		html = build_model_details_html(model)
@@ -342,8 +485,9 @@ class ModelHandlersMixin:
 		self._refreshModelsList(model_to_select=self._getCurrentModelKey())
 		wx.CallAfter(self.onModelChange, None)
 
-	def onFavoriteModel(self, evt):
-		model = self._requireModel()
+	def onFavoriteModel(self, evt=None, model=None):
+		if model is None:
+			model = self._requireModel()
 		if not model:
 			return
 		fav = self._getFavoriteModels()
@@ -375,18 +519,22 @@ class ModelHandlersMixin:
 		wx.CallAfter(self.onModelChange, None)
 
 	def onModelContextMenu(self, evt):
-		model = self._requireModel()
+		lst = evt.GetEventObject()
+		idx = lst.GetSelection() if lst is not None else wx.NOT_FOUND
+		model = lst.GetClientData(idx) if lst is not None and idx != wx.NOT_FOUND else None
+		if not model:
+			model = self._requireModel()
 		if not model:
 			return
 		menu = wx.Menu()
 		item_id = wx.NewIdRef()
 		menu.Append(item_id, _("Show model &details") + " (Space)")
-		self.Bind(wx.EVT_MENU, self.showModelDetails, id=item_id)
+		self.Bind(wx.EVT_MENU, lambda e, m=model: self.showModelDetails(e, m), id=item_id)
 		isFavorite = self._isModelFavorite(model)
 		item_id = wx.NewIdRef()
 		label = _("Add to &favorites") if not isFavorite else _("Remove from &favorites")
 		menu.Append(item_id, f"{label} (Shift+Space)")
-		self.Bind(wx.EVT_MENU, self.onFavoriteModel, id=item_id)
+		self.Bind(wx.EVT_MENU, lambda e, m=model: self.onFavoriteModel(e, model=m), id=item_id)
 		menu.AppendSeparator()
 		sort_menu = wx.Menu()
 		current_sort = self._getModelSortOrder()
@@ -413,5 +561,5 @@ class ModelHandlersMixin:
 		menu.Append(item_id, _("&Refresh model list"))
 		self.Bind(wx.EVT_MENU, lambda e: self._reloadModels(), id=item_id)
 		menu.AppendSeparator()
-		self.modelsListCtrl.PopupMenu(menu)
+		lst.PopupMenu(menu)
 		menu.Destroy()

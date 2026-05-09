@@ -452,7 +452,7 @@ def _extract_reasoning_text(value: Any) -> str:
 				parts.append(txt)
 		return "\n".join(parts).strip()
 	if isinstance(value, dict):
-		for key in ("text", "content", "reasoning", "thinking", "summary"):
+		for key in ("text", "content", "reasoning", "thinking", "thought", "summary"):
 			txt = _extract_reasoning_text(value.get(key))
 			if txt:
 				return txt
@@ -472,26 +472,43 @@ def _split_text_and_reasoning_from_parts(parts: Any) -> tuple[str, str]:
 		part_text = _extract_reasoning_text(part)
 		if not part_text:
 			continue
-		if "reasoning" in part_type or "thinking" in part_type:
+		if (
+			"reasoning" in part_type
+			or "thinking" in part_type
+			or part_type in ("thought", "thought_summary")
+		):
 			reasoning_chunks.append(part_text)
 		else:
 			text_chunks.append(part_text)
 	return "\n".join(text_chunks).strip(), "\n".join(reasoning_chunks).strip()
 
 
-def _split_ollama_think_inline(text: str, in_think: bool = False) -> tuple[str, str, bool]:
-	"""Split inline <think>...</think> blocks from content."""
+# Inline thinking blocks emitted by some reasoning models (OpenRouter, Ollama, DeepSeek R1, etc.).
+# Order: strip redacted_thinking-style wrappers first, then plain think tags (some distillations / R1-style).
+_THINK_TAG_PAIRS = (
+	("<think>", "</think>"),
+	("", ""),
+)
+
+# Worst-case suffix kept between SSE chunks so a tag is never split across chunk boundaries incorrectly.
+_THINK_STREAM_CARRY_KEEP = max((max(len(o), len(c)) for o, c in _THINK_TAG_PAIRS), default=1) - 1
+if _THINK_STREAM_CARRY_KEEP < 1:
+	_THINK_STREAM_CARRY_KEEP = 1
+
+
+def _split_think_pair_inline(text: str, in_think: bool, open_tag: str, close_tag: str) -> tuple[str, str, bool]:
+	"""Split one tag pair from content (case-insensitive tag names)."""
 	if not text:
 		return "", "", in_think
 	resp_parts = []
 	reasoning_parts = []
 	lower = text.lower()
+	ot_l = open_tag.lower()
+	ct_l = close_tag.lower()
 	i = 0
-	open_tag = "<think>"
-	close_tag = "</think>"
 	while i < len(text):
 		if in_think:
-			j = lower.find(close_tag, i)
+			j = lower.find(ct_l, i)
 			if j < 0:
 				reasoning_parts.append(text[i:])
 				i = len(text)
@@ -500,7 +517,7 @@ def _split_ollama_think_inline(text: str, in_think: bool = False) -> tuple[str, 
 			i = j + len(close_tag)
 			in_think = False
 		else:
-			j = lower.find(open_tag, i)
+			j = lower.find(ot_l, i)
 			if j < 0:
 				resp_parts.append(text[i:])
 				i = len(text)
@@ -511,8 +528,27 @@ def _split_ollama_think_inline(text: str, in_think: bool = False) -> tuple[str, 
 	return "".join(resp_parts), "".join(reasoning_parts), in_think
 
 
-def _split_ollama_think_stream(text: str, state: dict) -> tuple[str, str]:
-	"""Streaming parser for potentially fragmented <think> tags."""
+def _split_ollama_think_inline(text: str, in_think: bool = False) -> tuple[str, str, bool]:
+	"""Split all known inline thinking tag pairs from assistant content (non-streaming)."""
+	visible = text or ""
+	reasoning_all = []
+	final_in_think = in_think
+	for open_tag, close_tag in _THINK_TAG_PAIRS:
+		visible, chunk, final_in_think = _split_think_pair_inline(visible, False, open_tag, close_tag)
+		if chunk:
+			reasoning_all.append(chunk)
+	return visible, "".join(reasoning_all), final_in_think
+
+
+def _should_apply_inline_think_strip(provider: str, has_separate_reasoning: bool) -> bool:
+	"""Parse think-tags from assistant text only when the API did not return structured reasoning."""
+	if provider == "Anthropic":
+		return False
+	return not has_separate_reasoning
+
+
+def _split_think_pair_stream(text: str, state: dict, open_tag: str, close_tag: str) -> tuple[str, str]:
+	"""Incremental parser for one tag pair across chunked SSE text."""
 	if not isinstance(state, dict):
 		state = {}
 	carry = state.get("carry", "") or ""
@@ -520,28 +556,63 @@ def _split_ollama_think_stream(text: str, state: dict) -> tuple[str, str]:
 	buf = carry + (text or "")
 	if not buf:
 		return "", ""
-	keep = 7  # len("</think>") - 1; enough to retain split tags between chunks
+	keep = _THINK_STREAM_CARRY_KEEP
 	if len(buf) <= keep:
 		state["carry"] = buf
 		state["in_think"] = in_think
 		return "", ""
 	process = buf[:-keep]
 	state["carry"] = buf[-keep:]
-	resp, reasoning, in_think = _split_ollama_think_inline(process, in_think=in_think)
+	resp, reasoning, in_think = _split_think_pair_inline(process, in_think=in_think, open_tag=open_tag, close_tag=close_tag)
 	state["in_think"] = in_think
 	return resp, reasoning
 
 
-def _flush_ollama_think_stream(state: dict) -> tuple[str, str]:
-	"""Flush remaining buffered text from Ollama think stream parser."""
+def _flush_think_pair_stream(state: dict, open_tag: str, close_tag: str) -> tuple[str, str]:
+	"""Flush carry for one tag pair at end of stream."""
 	if not isinstance(state, dict):
 		return "", ""
 	carry = state.get("carry", "") or ""
 	in_think = bool(state.get("in_think", False))
 	state["carry"] = ""
-	resp, reasoning, in_think = _split_ollama_think_inline(carry, in_think=in_think)
+	resp, reasoning, in_think = _split_think_pair_inline(carry, in_think=in_think, open_tag=open_tag, close_tag=close_tag)
 	state["in_think"] = in_think
 	return resp, reasoning
+
+
+def _flush_think_chain(states: list) -> tuple[str, str]:
+	"""Flush all tag-pair stream parsers in order (see _apply_think_chain_to_chunk)."""
+	if not states:
+		return "", ""
+	reasoning_parts = []
+	visible_acc = ""
+	for idx, (open_tag, close_tag) in enumerate(_THINK_TAG_PAIRS):
+		if idx >= len(states):
+			break
+		s = states[idx]
+		buf = (s.get("carry") or "") + visible_acc
+		s["carry"] = ""
+		v, r, in_t = _split_think_pair_inline(buf, s.get("in_think", False), open_tag, close_tag)
+		s["in_think"] = in_t
+		visible_acc = v
+		if r:
+			reasoning_parts.append(r)
+	return visible_acc, "".join(reasoning_parts)
+
+
+def _apply_think_chain_to_chunk(content: str, states: list) -> tuple[str, str]:
+	"""Run streamed content through each tag pair parser in sequence."""
+	if not content or not states:
+		return content or "", ""
+	out = content
+	reasoning_frags = []
+	for idx, (open_tag, close_tag) in enumerate(_THINK_TAG_PAIRS):
+		if idx >= len(states):
+			break
+		out, frag = _split_think_pair_stream(out, states[idx], open_tag, close_tag)
+		if frag:
+			reasoning_frags.append(frag)
+	return out, "".join(reasoning_frags)
 
 
 def _convert_messages_to_anthropic(messages: list) -> tuple[str | None, list]:
@@ -690,10 +761,10 @@ class OpenAIClient:
 		"""Parse SSE stream and yield stream events."""
 		try:
 			provider = getattr(self, "provider", "")
-			is_ollama = provider == "Ollama"
-			is_deepseek = provider == "DeepSeek"
-			use_inline_think_parser = is_ollama or is_deepseek
-			inline_think_state = {"carry": "", "in_think": False} if use_inline_think_parser else None
+			# Once any chunk carries structured reasoning, stop stripping inline think-tags from content (avoids mangling DeepSeek/OpenAI deltas).
+			structured_reasoning_seen = False
+			# OpenAI-compatible SSE: merge gateway reasoning_* delta keys, strip embedded think tags from content when needed.
+			think_chain_states = [{"carry": "", "in_think": False} for _ in _THINK_TAG_PAIRS]
 			buf = b""
 			for chunk in resp:
 				buf += chunk
@@ -704,8 +775,8 @@ class OpenAIClient:
 						continue
 					payload = line[6:].strip()
 					if payload == b"[DONE]":
-						if use_inline_think_parser and inline_think_state:
-							content, reasoning = _flush_ollama_think_stream(inline_think_state)
+						if think_chain_states:
+							content, reasoning = _flush_think_chain(think_chain_states)
 							if content or reasoning:
 								yield type("StreamEvent", (), {
 									"choices": [StreamChoice(ChoiceDelta(content, reasoning=reasoning), None)],
@@ -735,23 +806,43 @@ class OpenAIClient:
 										content, reasoning = _split_text_and_reasoning_from_parts(content_val)
 									else:
 										content = content_val
-									for key in ("reasoning", "reasoning_content", "thinking", "thinking_content"):
+									for key in (
+										"reasoning",
+										"reasoning_content",
+										"thinking",
+										"thinking_content",
+										"thought",
+									):
 										text = _extract_reasoning_text(delta.get(key))
 										if text:
 											reasoning = text
 											break
 									if not reasoning and isinstance(delta.get("reasoning_details"), list):
 										reasoning = _extract_reasoning_text(delta.get("reasoning_details"))
+									# OpenAI streaming: refusal may stream in delta.refusal while content is empty.
+									refusal_txt = delta.get("refusal")
+									if isinstance(refusal_txt, str) and refusal_txt:
+										content = (content or "") + refusal_txt
 								else:
 									content = None
 								finish = c.get("finish_reason")
-						# OpenAI Responses-style streamed events without choices.
+								if finish is None and isinstance(delta, dict):
+									finish = delta.get("finish_reason")
+						if finish is None:
+							finish = data.get("finish_reason") if isinstance(data, dict) else None
+						# OpenAI Responses API and other choice-less SSE shapes.
 						if not choices:
 							evt_type = str(data.get("type", "")).lower()
 							if "reasoning" in evt_type or "thinking" in evt_type:
-								reasoning = _extract_reasoning_text(data)
+								reasoning = _extract_reasoning_text(data.get("delta")) or _extract_reasoning_text(data)
 							elif "text.delta" in evt_type or "output_text.delta" in evt_type:
-								content = _extract_reasoning_text(data.get("delta") or data.get("text") or "")
+								raw_d = data.get("delta")
+								if isinstance(raw_d, str):
+									content = raw_d
+								else:
+									content = _extract_reasoning_text(raw_d) or _extract_reasoning_text(
+										data.get("text") or ""
+									)
 							elif "response.output_item.added" in evt_type:
 								item = data.get("item") or {}
 								item_content = item.get("content")
@@ -761,14 +852,12 @@ class OpenAIClient:
 						if content is not None and not isinstance(content, str):
 							content = str(content)
 						content = content or ""
-						if use_inline_think_parser and inline_think_state and content:
-							# Provider alignment:
-							# - Ollama: inline <think> tags are expected, parse always.
-							# - DeepSeek: official stream format exposes reasoning_content; parse inline tags only as fallback.
-							if is_ollama or (is_deepseek and not reasoning):
-								content, think_from_content = _split_ollama_think_stream(content, inline_think_state)
-								if think_from_content:
-									reasoning = f"{reasoning}{think_from_content}" if reasoning else think_from_content
+						if think_chain_states and content and not structured_reasoning_seen:
+							content, think_from_tags = _apply_think_chain_to_chunk(content, think_chain_states)
+							if think_from_tags:
+								reasoning = f"{reasoning}{think_from_tags}" if reasoning else think_from_tags
+						if (reasoning or "").strip():
+							structured_reasoning_seen = True
 						yield type("StreamEvent", (), {
 							"choices": [StreamChoice(ChoiceDelta(content, reasoning=reasoning), finish)],
 							"usage": usage,
@@ -795,13 +884,13 @@ class OpenAIClient:
 			else:
 				content = content_val or c.get("text") or ""
 			if not reasoning_text:
-				for key in ("reasoning", "reasoning_content", "thinking", "thinking_content", "reasoning_details"):
+				for key in ("reasoning", "reasoning_content", "thinking", "thinking_content", "reasoning_details", "thought"):
 					candidate = _extract_reasoning_text(msg.get(key))
 					if candidate:
 						reasoning_text = candidate
 						break
 			if not reasoning_text:
-				for key in ("reasoning", "reasoning_content", "thinking", "thinking_content", "reasoning_details"):
+				for key in ("reasoning", "reasoning_content", "thinking", "thinking_content", "reasoning_details", "thought"):
 					candidate = _extract_reasoning_text(c.get(key))
 					if candidate:
 						reasoning_text = candidate
@@ -810,17 +899,11 @@ class OpenAIClient:
 				content = str(content)
 			content = content or ""
 			provider = getattr(self, "provider", "")
-			if provider == "Ollama" and content:
+			if content and _should_apply_inline_think_strip(provider, bool((reasoning_text or "").strip())):
 				visible, think_inline, _ = _split_ollama_think_inline(content, in_think=False)
 				content = visible
 				if think_inline:
 					reasoning_text = f"{reasoning_text}{think_inline}" if reasoning_text else think_inline
-			elif provider == "DeepSeek" and content and not reasoning_text:
-				# DeepSeek official path is reasoning_content; inline tag split is fallback only.
-				visible, think_inline, _ = _split_ollama_think_inline(content, in_think=False)
-				content = visible
-				if think_inline:
-					reasoning_text = think_inline
 			audio = msg.get("audio")
 			if isinstance(audio, dict) and audio.get("data"):
 				choices.append(Choice(ChoiceMessage(content, audio=audio, reasoning=reasoning_text), index=i))
@@ -834,6 +917,8 @@ class OpenAIClient:
 			raise APIError(f"Invalid file path: {file_path}")
 		boundary = uuid.uuid4().hex
 		filename = os.path.basename(file_path)
+		for ch in '\r\n"\\':
+			filename = filename.replace(ch, "_")
 		file_mime = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
 		with open(file_path, "rb") as f:
 			file_data = f.read()
@@ -968,6 +1053,12 @@ class OpenAIClient:
 					reasoning_parts.append(r)
 		text = "".join(text_parts).strip()
 		reasoning = "\n".join(reasoning_parts).strip()
+		provider = getattr(self, "provider", "")
+		if text and _should_apply_inline_think_strip(provider, bool(reasoning.strip())):
+			visible, think_inline, _ = _split_ollama_think_inline(text, in_think=False)
+			text = visible.strip()
+			if think_inline:
+				reasoning = f"{reasoning}\n{think_inline}".strip() if reasoning else think_inline
 		return ChatCompletion(
 			[Choice(ChoiceMessage(content=text, reasoning=reasoning))],
 			usage=_normalize_usage_from_payload(data),
@@ -1060,6 +1151,15 @@ class OpenAIClient:
 			body["top_p"] = top_p
 		if kwargs.get("top_k") is not None:
 			body["top_k"] = kwargs["top_k"]
+		stop_kw = kwargs.get("stop")
+		if stop_kw is not None:
+			seq = []
+			if isinstance(stop_kw, str) and stop_kw.strip():
+				seq = [stop_kw.strip()]
+			elif isinstance(stop_kw, list):
+				seq = [s.strip() for s in stop_kw if isinstance(s, str) and s.strip()]
+			if seq:
+				body["stop_sequences"] = seq[:16]
 		# Extended thinking (reasoning) - Anthropic API spec.
 		# effort belongs in output_config and must be model-compatible.
 		caps = get_anthropic_thinking_profile(model)
@@ -1165,7 +1265,8 @@ class OpenAIClient:
 									"usage": usage,
 								})()
 							elif delta.get("type") in ("thinking_delta", "reasoning_delta"):
-								reasoning = _extract_reasoning_text(delta) or _extract_reasoning_text(delta.get("thinking"))
+								th = delta.get("thinking")
+								reasoning = th if isinstance(th, str) else _extract_reasoning_text(delta)
 								yield type("StreamEvent", (), {
 									"choices": [StreamChoice(ChoiceDelta("", reasoning=reasoning), None)],
 									"usage": usage,

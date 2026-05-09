@@ -1,4 +1,3 @@
-# coding: UTF-8
 """
 Audio utilities - silence trimming, resampling for voice recordings.
 Uses only Python standard library (wave, struct).

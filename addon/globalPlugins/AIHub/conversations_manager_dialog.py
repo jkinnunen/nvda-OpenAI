@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Conversation management dialog: list, open, rename, delete saved conversations."""
 import datetime
 import os
@@ -55,7 +54,7 @@ def _open_tool_dialog_from_conversation(plugin, dialog_cls, conversation_data):
 	)
 
 
-class ConversationsManagerDlg(wx.Dialog):
+class ConversationsManagerDialog(wx.Dialog):
 	# Translators: Title of the conversation management dialog
 	title = _("Conversation history")
 
@@ -269,7 +268,6 @@ class ConversationsManagerDlg(wx.Dialog):
 		conf = config.conf.get("AIHub", {})
 		conv_format = normalize_conversation_format(data.get("format", ConversationFormat.GENERIC.value))
 		self.EndModal(wx.ID_OK)
-		self.Destroy()
 		if not client or not conf:
 			return
 		tool_dialog_map = {
@@ -284,7 +282,7 @@ class ConversationsManagerDlg(wx.Dialog):
 			dialog_cls = tool_dialog_map[conv_format]
 			wx.CallAfter(_open_tool_dialog_from_conversation, plugin, dialog_cls, data)
 			return
-		wx.CallAfter(plugin._openMainDialog, None, data, False)
+		wx.CallAfter(plugin._openMainDialog, None, data, False, True)
 
 	def onRename(self, evt):
 		selected = self._get_selected_entries()
@@ -331,9 +329,14 @@ class ConversationsManagerDlg(wx.Dialog):
 		if res != wx.YES:
 			return
 		deleted = 0
+		deleted_ids = []
 		for entry in selected:
-			if conversations.delete_conversation(entry["id"]):
+			cid = entry["id"]
+			if conversations.delete_conversation(cid):
+				deleted_ids.append(cid)
 				deleted += 1
+		if deleted_ids:
+			conversations.prune_hub_session_references(deleted_ids)
 		if deleted:
 			self.refresh_list()
 			ui.message(
@@ -355,9 +358,14 @@ class ConversationsManagerDlg(wx.Dialog):
 		if res != wx.YES:
 			return
 		deleted = 0
+		deleted_ids = []
 		for entry in list(self._entries):
-			if conversations.delete_conversation(entry["id"]):
+			cid = entry["id"]
+			if conversations.delete_conversation(cid):
+				deleted_ids.append(cid)
 				deleted += 1
+		if deleted_ids:
+			conversations.prune_hub_session_references(deleted_ids)
 		self.refresh_list()
 		ui.message(
 			_("Deleted %d conversation.") % deleted
@@ -370,7 +378,6 @@ class ConversationsManagerDlg(wx.Dialog):
 		client = plugin.getClient()
 		conf = config.conf.get("AIHub", {})
 		self.EndModal(wx.ID_OK)
-		self.Destroy()
 		if not client or not conf:
 			return
 		wx.CallAfter(plugin._openMainDialog, None, None, False)
@@ -385,9 +392,14 @@ def show_conversations_manager(plugin):
 		ui.message(getattr(init_mod, "NO_AUTHENTICATION_KEY_PROVIDED_MSG", _("No API key provided")))
 		return
 	gui.mainFrame.prePopup()
+	dlg = None
 	try:
-		dlg = ConversationsManagerDlg(gui.mainFrame, plugin)
+		dlg = ConversationsManagerDialog(gui.mainFrame, plugin)
 		dlg.ShowModal()
-		dlg.Destroy()
 	finally:
+		try:
+			if dlg is not None:
+				dlg.Destroy()
+		except Exception:
+			pass
 		gui.mainFrame.postPopup()

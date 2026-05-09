@@ -1,7 +1,8 @@
-# coding: UTF-8
 """Helpers for provider tools dialogs."""
 
 import wx
+
+from .consts import UI_FORM_ROW_BORDER_PX
 
 
 def safe_int(value, default=None):
@@ -65,10 +66,10 @@ def extract_ocr_text(payload):
 	return "\n\n".join(lines).strip()
 
 
-def add_labeled_control(parent, sizer, label_text, control, border=6, expand=True):
+def add_labeled_control(parent, sizer, label_text, control, border=UI_FORM_ROW_BORDER_PX, expand=True):
 	"""
 	Add a label and control stacked vertically.
-	This layout mirrors the main dialog pattern and improves SR label association.
+	This layout mirrors the conversation window pattern and improves SR label association.
 	"""
 	label = wx.StaticText(parent, label=label_text)
 	sizer.Add(label, 0, wx.LEFT | wx.RIGHT | wx.TOP, border)
@@ -80,7 +81,7 @@ def add_labeled_control(parent, sizer, label_text, control, border=6, expand=Tru
 	return label
 
 
-def add_labeled_factory(parent, sizer, label_text, control_factory, border=6, expand=True):
+def add_labeled_factory(parent, sizer, label_text, control_factory, border=UI_FORM_ROW_BORDER_PX, expand=True):
 	"""
 	Create label first, then control, then add to sizer.
 	Useful when SR association depends on creation order.

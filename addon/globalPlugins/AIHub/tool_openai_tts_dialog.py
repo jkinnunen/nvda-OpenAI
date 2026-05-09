@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Dedicated dialog for OpenAI TTS."""
 
 import threading
@@ -10,7 +9,14 @@ from logHandler import log
 
 from .apiclient import APIConnectionError, APIStatusError
 from .conversations import ConversationFormat
-from .consts import SND_CHAT_RESPONSE_RECEIVED, SND_PROGRESS, stop_progress_sound
+from .consts import (
+	SND_CHAT_RESPONSE_RECEIVED,
+	SND_PROGRESS,
+	stop_progress_sound,
+	UI_DIALOG_BORDER_PX,
+	UI_FORM_ROW_BORDER_PX,
+	UI_SECTION_SPACING_PX,
+)
 from .mediastore import build_media_path
 from .providertools_helpers import add_labeled_factory, safe_float
 from .tool_dialog_base import ToolDialogBase
@@ -63,7 +69,7 @@ class OpenAITTSToolDialog(ToolDialogBase):
 		)
 		self.openGeneratedAudioBtn = wx.Button(self.formPanel, label=_("Open generated audio"))
 		self.openGeneratedAudioBtn.Bind(wx.EVT_BUTTON, self.onOpenGeneratedAudio)
-		main.Add(self.openGeneratedAudioBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		main.Add(self.openGeneratedAudioBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		self.modelChoice = add_labeled_factory(
 			self.formPanel, main, _("&Model:"), lambda: wx.ComboBox(self.formPanel, choices=list(self.SUGGESTED_MODELS), style=wx.CB_DROPDOWN, value=self.SUGGESTED_MODELS[0])
 		)
@@ -91,12 +97,12 @@ class OpenAITTSToolDialog(ToolDialogBase):
 		self.bind_ctrl_enter_submit(self.onRun)
 		self.closeBtn = wx.Button(self.formPanel, id=wx.ID_CLOSE)
 		self.closeBtn.Bind(wx.EVT_BUTTON, self.onClose)
-		buttons.Add(self.runBtn, 0, wx.ALL, 5)
-		buttons.Add(self.closeBtn, 0, wx.ALL, 5)
-		main.Add(buttons, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
+		buttons.Add(self.runBtn, 0, wx.ALL, UI_SECTION_SPACING_PX)
+		buttons.Add(self.closeBtn, 0, wx.ALL, UI_SECTION_SPACING_PX)
+		main.Add(buttons, 0, wx.ALIGN_RIGHT | wx.ALL, UI_SECTION_SPACING_PX)
 
 		self.formPanel.SetSizer(main)
-		dialogSizer.Add(self.formPanel, 1, wx.EXPAND | wx.ALL, 6)
+		dialogSizer.Add(self.formPanel, 1, wx.EXPAND | wx.ALL, UI_DIALOG_BORDER_PX)
 		self.SetSizer(dialogSizer)
 		if parent:
 			self.CentreOnParent(wx.BOTH)

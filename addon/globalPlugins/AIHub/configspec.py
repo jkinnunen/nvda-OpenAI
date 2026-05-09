@@ -33,7 +33,6 @@ confSpecs = {
 	"blockEscapeKey": "boolean(default=False)",
 	"saveSystem": "boolean(default=true)",
 	"autoSaveConversation": "boolean(default=True)",
-	"advancedMode": "boolean(default=False)",
 	"images": {
 		"maxHeight": "integer(min=0, default=720)",
 		"maxWidth": "integer(min=0, default=0)",

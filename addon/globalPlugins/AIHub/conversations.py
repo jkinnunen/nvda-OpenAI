@@ -12,7 +12,7 @@ import addonHandler
 from logHandler import log
 
 from .consts import DATA_DIR, ensure_dir_exists
-from .imagedlg import ImageFile
+from .image_file import ImageFile
 from .mediastore import persist_local_file
 
 addonHandler.initTranslation()
@@ -323,6 +323,11 @@ def _block_to_dict(block) -> dict:
 		"model": getattr(block, "model", "") or "",
 		"temperature": getattr(block, "temperature", 0),
 		"topP": getattr(block, "topP", 0),
+		"seed": getattr(block, "seed", None),
+		"topK": getattr(block, "topK", None),
+		"stopText": getattr(block, "stopText", "") or "",
+		"frequencyPenalty": getattr(block, "frequencyPenalty", None),
+		"presencePenalty": getattr(block, "presencePenalty", None),
 		"maxTokens": getattr(block, "maxTokens", 0),
 		"system": getattr(block, "system", "") or "",
 	}
@@ -417,6 +422,11 @@ def _dict_to_block(d: dict, conv_id: str = "", block_idx: int = 0):
 	block.model = d.get("model", "")
 	block.temperature = d.get("temperature", 0)
 	block.topP = d.get("topP", 0)
+	block.seed = d.get("seed")
+	block.topK = d.get("topK")
+	block.stopText = d.get("stopText", "") or ""
+	block.frequencyPenalty = d.get("frequencyPenalty")
+	block.presencePenalty = d.get("presencePenalty")
 	block.maxTokens = d.get("maxTokens", 0)
 	block.system = d.get("system", "")
 	block.usage = d.get("usage") if isinstance(d.get("usage"), dict) else {}
@@ -561,8 +571,76 @@ def get_conversation_path(conv_id: str) -> str:
 	return os.path.join(CONVERSATIONS_DIR, f"{conv_id}.json")
 
 
+HUB_SESSION_JSON = os.path.join(DATA_DIR, "hub_session.json")
+
+
+def write_hub_session_snapshot(*, tabs: list) -> None:
+	"""Write hub_session.json as version 2 (tabs only). Uses atomic replace."""
+	_atomic_write_json(HUB_SESSION_JSON, {"version": 2, "tabs": tabs})
+
+
+def remove_hub_session_file() -> None:
+	"""Remove hub_session.json when session persistence is disabled."""
+	if not os.path.isfile(HUB_SESSION_JSON):
+		return
+	try:
+		os.remove(HUB_SESSION_JSON)
+	except OSError as err:
+		log.debug("remove hub session file: %s", err)
+
+
+def conversation_file_exists(conv_id: str) -> bool:
+	if not conv_id or not isinstance(conv_id, str):
+		return False
+	return os.path.isfile(get_conversation_path(conv_id))
+
+
+def prune_hub_session_references(removed_ids) -> None:
+	"""Remove tab entries from hub_session.json when those conversations were deleted."""
+	if not removed_ids:
+		return
+	removed = {str(x) for x in removed_ids if x}
+	if not removed:
+		return
+	if not os.path.isfile(HUB_SESSION_JSON):
+		return
+	try:
+		with open(HUB_SESSION_JSON, "r", encoding="utf-8") as f:
+			snap = json.load(f)
+	except Exception as err:
+		log.debug("prune hub session: read failed: %s", err)
+		return
+	tabs = snap.get("tabs")
+	if not isinstance(tabs, list) or not tabs:
+		return
+	new_tabs = []
+	changed = False
+	for entry in tabs:
+		cid = ""
+		if isinstance(entry, dict):
+			cid = entry.get("id") or ""
+		elif isinstance(entry, str):
+			cid = entry
+		if cid in removed:
+			changed = True
+			continue
+		new_tabs.append(entry if isinstance(entry, dict) else {"id": cid})
+	if not changed:
+		return
+	if not new_tabs:
+		try:
+			os.remove(HUB_SESSION_JSON)
+		except OSError as err:
+			log.debug("prune hub session: remove empty file: %s", err)
+		return
+	try:
+		write_hub_session_snapshot(tabs=new_tabs)
+	except Exception as err:
+		log.warning("prune hub session: write failed: %s", err)
+
+
 def load_conversation(conv_id: str) -> dict | None:
-	"""Load conversation by id. Returns dict with keys: id, name, system, blocks, model, draftPrompt."""
+	"""Load conversation by id. Returns dict with keys: id, name, system, blocks, model, draftPrompt, accountKey, uiState."""
 	path = get_conversation_path(conv_id)
 	if not os.path.exists(path):
 		return None
@@ -573,12 +651,16 @@ def load_conversation(conv_id: str) -> dict | None:
 		blocks = []
 		for idx, bd in enumerate(blocks_data):
 			blocks.append(_dict_to_block(bd, conv_id=conv_id, block_idx=idx))
+		raw_ui = data.get("uiState")
+		ui_state = raw_ui if isinstance(raw_ui, dict) else {}
 		return {
 			"id": data.get("id", conv_id),
 			"name": data.get("name", _("Untitled conversation")),
 			"system": data.get("system", ""),
 			"blocks": blocks,
 			"model": data.get("model", ""),
+			"accountKey": data.get("accountKey", ""),
+			"uiState": ui_state,
 			"draftPrompt": data.get("draftPrompt", ""),
 			"draftPathList": data.get("draftPathList", []),
 			"draftAudioPathList": data.get("draftAudioPathList", []),
@@ -604,6 +686,8 @@ def save_conversation(
 	draftAudioPathList=None,
 	conversation_format: ConversationFormat | str = ConversationFormat.GENERIC,
 	format_data: dict | None = None,
+	account_key: str = "",
+	ui_state: dict | None = None,
 ) -> str:
 	"""
 	Save conversation. Returns conversation id.
@@ -630,6 +714,7 @@ def save_conversation(
 			)
 	now = int(time.time())
 	normalized_format = normalize_conversation_format(conversation_format)
+	ui_payload = ui_state if isinstance(ui_state, dict) else {}
 	path = get_conversation_path(conv_id) if conv_id else ""
 	if conv_id and os.path.exists(path):
 		try:
@@ -642,6 +727,8 @@ def save_conversation(
 			existing["name"] = name
 		existing["system"] = system
 		existing["model"] = model
+		existing["accountKey"] = account_key or ""
+		existing["uiState"] = ui_payload
 		existing["draftPrompt"] = draftPrompt or ""
 		existing["draftPathList"] = serialized_draft_paths
 		existing["draftAudioPathList"] = serialized_draft_audio
@@ -664,6 +751,8 @@ def save_conversation(
 			"updated": now,
 			"system": system,
 			"model": model,
+			"accountKey": account_key or "",
+			"uiState": ui_payload,
 			"draftPrompt": draftPrompt or "",
 			"draftPathList": serialized_draft_paths,
 			"draftAudioPathList": serialized_draft_audio,

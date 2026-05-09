@@ -2,6 +2,7 @@
 import base64
 import json
 import os
+import re
 import threading
 import time
 import uuid
@@ -21,6 +22,53 @@ from .recordthread import transcribe_audio_file
 from .resultevent import ResultEvent
 
 addonHandler.initTranslation()
+
+# Speak streamed chunks this often even without newline/sentence punctuation (models often stream long clauses).
+_STREAM_SPEECH_FLUSH_CHARS = 96
+
+
+def _strip_markdown_for_speech(fragment: str) -> str:
+	"""Remove common markdown syntax so streamed TTS does not read *, #, etc. Chunks may be incomplete."""
+	if not fragment:
+		return ""
+	t = fragment
+	t = re.sub(r"(^|\n)[ \t]*#{1,6}(?:[ \t]+|$)", r"\1", t)
+	t = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", t)
+	t = re.sub(r"!\[([^\]]*)\]\([^)]*\)", r"\1", t)
+	for _ in range(4):
+		t = t.replace("***", "").replace("**", "")
+	while "__" in t:
+		t = t.replace("__", "")
+	while "```" in t:
+		t = t.replace("```", "")
+	t = t.replace("`", "")
+	t = re.sub(r"(?<!\*)\*(?!\*)", "", t)
+	t = re.sub(r"\s+", " ", t).strip()
+	return t
+
+
+def _parse_stop_sequences(text: str, *, provider: str) -> list[str]:
+	"""Non-empty lines from multiline stop UI; cap follows common provider limits (OpenAI chat: 4)."""
+	seq = []
+	for line in (text or "").replace("\r\n", "\n").split("\n"):
+		s = line.strip()
+		if s:
+			seq.append(s)
+	cap = 4 if provider in ("OpenAI", "CustomOpenAI") else 16
+	return seq[:cap]
+
+
+def _params_for_error_log(params):
+	"""Subset of chat completion params suitable for NVDA logs (no prompt / message bodies)."""
+	if not isinstance(params, dict):
+		return params
+	out = {k: v for k, v in params.items() if k != "messages"}
+	msgs = params.get("messages")
+	if isinstance(msgs, list):
+		out["messages"] = "<%d message(s) omitted>" % len(msgs)
+	else:
+		out["messages"] = "<omitted>"
+	return out
 
 
 class CompletionThread(threading.Thread):
@@ -166,23 +214,23 @@ class CompletionThread(threading.Thread):
 		block.prompt = prompt
 		model = wnd.getCurrentModel()
 		block.model = model.id
-		stream = conf["stream"]
-		debug = conf["debug"]
+		stream = wnd.streamModeCheckBox.IsChecked()
+		conf["stream"] = stream
+		debug = wnd.debugModeCheckBox.IsChecked()
+		conf["debug"] = debug
 		t0 = time.perf_counter()
 		maxTokens = wnd.maxTokensSpinCtrl.GetValue()
 		block.maxTokens = maxTokens
 		data["maxTokens_%s" % model.id] = maxTokens
 		temperature = 1
 		topP = 1
-		if conf["advancedMode"]:
+		_adv_fn = getattr(wnd, "_effective_advanced_mode", None)
+		_advanced_on = _adv_fn() if callable(_adv_fn) else False
+		if _advanced_on:
 			temperature = wnd.temperatureSpinCtrl.GetValue() / 100
 			data["temperature_%s" % model.id] = wnd.temperatureSpinCtrl.GetValue()
 			topP = wnd.topPSpinCtrl.GetValue() / 100
 			conf["topP"] = wnd.topPSpinCtrl.GetValue()
-			debug = wnd.debugModeCheckBox.IsChecked()
-			conf["debug"] = debug
-			stream = wnd.streamModeCheckBox.IsChecked()
-			conf["stream"] = stream
 		block.temperature = temperature
 		block.topP = topP
 		block.pathList = wnd.pathList.copy()
@@ -202,6 +250,12 @@ class CompletionThread(threading.Thread):
 				self._log_timing(debug, "transcription", time.perf_counter() - t_transcribe_start)
 				block.audioTranscriptList = transcripts
 				current_audio_transcripts = transcripts
+				combined_txt = "\n".join(t for t in transcripts if t).strip()
+				if combined_txt:
+					try:
+						wx.CallAfter(wnd._merge_audio_transcripts_into_prompt, combined_txt)
+					except Exception:
+						pass
 				if not prompt and any(t for t in transcripts):
 					block.prompt = "\n".join(t for t in transcripts if t).strip()
 			except Exception as err:
@@ -251,36 +305,60 @@ class CompletionThread(threading.Thread):
 			"stream": use_stream
 		}
 		if use_stream and model.provider in ("OpenAI", "CustomOpenAI", "OpenRouter", "xAI"):
-			# OpenAI-compatible endpoints can return usage in final stream chunk.
 			params["stream_options"] = {"include_usage": True}
 		if audio_output or nbAudio > 0:
 			voice = conf.get("TTSVoice") or TTS_DEFAULT_VOICE
 			params["modalities"] = ["text", "audio"]
 			params["audio"] = {"voice": voice, "format": "wav"}
-		# Add sampling params; respect parameter_conflicts from model metadata
 		params_to_add = []
 		if "temperature" in model.supportedParameters:
 			params_to_add.append(("temperature", temperature))
 		if "top_p" in model.supportedParameters:
 			params_to_add.append(("top_p", topP))
+		if _advanced_on and "top_k" in model.supportedParameters and hasattr(wnd, "advancedTopKSpinCtrl"):
+			_tk = wnd.advancedTopKSpinCtrl.GetValue()
+			if _tk > 0:
+				params_to_add.append(("top_k", int(_tk)))
 		conflicts = getattr(model, "parameterConflicts", []) or []
 		for group in conflicts:
 			group_set = set(group)
 			candidates = [(k, v) for k, v in params_to_add if k in group_set]
 			if len(candidates) > 1:
-				# Pick one: prefer temperature, then top_p, then first in group
 				order = ("temperature", "top_p", "top_k")
 				chosen = next((c for p in order for c in candidates if c[0] == p), candidates[0])
 				params_to_add = [(k, v) for k, v in params_to_add if (k, v) == chosen or k not in group_set]
 		for k, v in params_to_add:
 			params[k] = v
+			if k == "top_k":
+				data["top_k_%s" % model.id] = v
+		if _advanced_on:
+			if "seed" in model.supportedParameters and hasattr(wnd, "advancedSeedSpinCtrl"):
+				sv = wnd.advancedSeedSpinCtrl.GetValue()
+				if sv >= 0:
+					params["seed"] = int(sv)
+					data["seed_%s" % model.id] = int(sv)
+			if "stop" in model.supportedParameters and hasattr(wnd, "advancedStopTextCtrl"):
+				stops = _parse_stop_sequences(
+					wnd.advancedStopTextCtrl.GetValue(),
+					provider=model.provider,
+				)
+				if stops:
+					params["stop"] = stops
+					data["stop_%s" % model.id] = wnd.advancedStopTextCtrl.GetValue()
+			if "frequency_penalty" in model.supportedParameters and hasattr(wnd, "advancedFreqPenaltySpinCtrl"):
+				fp = wnd.advancedFreqPenaltySpinCtrl.GetValue() / 100.0
+				params["frequency_penalty"] = fp
+				data["frequency_penalty_%s" % model.id] = wnd.advancedFreqPenaltySpinCtrl.GetValue()
+			if "presence_penalty" in model.supportedParameters and hasattr(wnd, "advancedPresPenaltySpinCtrl"):
+				pp = wnd.advancedPresPenaltySpinCtrl.GetValue() / 100.0
+				params["presence_penalty"] = pp
+				data["presence_penalty_%s" % model.id] = wnd.advancedPresPenaltySpinCtrl.GetValue()
 		reasoningEnabled = wnd.reasoningModeCheckBox.IsChecked()
 		useReasoning = getattr(model, "reasoning", False) and reasoningEnabled
 		if useReasoning and "include_reasoning" in getattr(model, "supportedParameters", []):
 			params["include_reasoning"] = True
 		if maxTokens > 0:
 			params["max_completion_tokens" if useReasoning else "max_tokens"] = maxTokens
-		# Reasoning: provider-specific parameters
 		effort = conf.get("reasoningEffort", "medium")
 		provider = model.provider
 		if useReasoning:
@@ -291,28 +369,24 @@ class CompletionThread(threading.Thread):
 			elif provider == "Google":
 				params["reasoning_effort"] = effort
 			elif provider == "xAI":
-				# Only grok-3-mini supports reasoning_effort; grok-3/4 reason by default
 				if "grok-3-mini" in model.id:
 					params["reasoning_effort"] = "high" if effort in ("medium", "high") else "low"
 			elif provider in ("OpenAI", "CustomOpenAI", "MistralAI", "OpenRouter"):
 				params["reasoning_effort"] = effort
 		elif provider == "Google" and "gemini-2.5" in model.id:
-			# Gemini 2.5: explicitly disable thinking when user unchecks reasoning
 			params["reasoning_effort"] = "none"
-		# Web search: provider-specific parameters
 		if model.supports_web_search and wnd.webSearchCheckBox.IsChecked():
 			provider = model.provider
 			if provider == "Anthropic":
 				params["web_search_options"] = {}
 			elif provider == "Google":
-				# Gemini native format for grounding with Google Search
 				params["tools"] = [{"google_search": {}}]
 		if debug:
 			log.info("Client base URL: %s", client.base_url)
 			log.info("OpenAI [timing] Messages in request: %d", len(messages))
 			if nbImages:
 				log.info("%d images", nbImages)
-			log.info(json.dumps(params, indent=2, ensure_ascii=False))
+			log.info(json.dumps(_params_for_error_log(params), indent=2, ensure_ascii=False))
 		try:
 			t_api_start = time.perf_counter()
 			block.timing["requestSentAt"] = time.time()
@@ -323,7 +397,7 @@ class CompletionThread(threading.Thread):
 				winsound.PlaySound(SND_CHAT_RESPONSE_SENT, winsound.SND_ASYNC)
 		except Exception as err:
 			log.error("Error when calling the API for model %s: %s", model.id, err, exc_info=True)
-			log.error("Parameters used: %s", params)
+			log.error("Parameters used (messages omitted): %s", _params_for_error_log(params))
 			stop_progress_sound()
 			doc_error = self._maybe_build_document_support_error(err, provider, nbDocuments)
 			wx.PostEvent(self._notifyWindow, ResultEvent(doc_error if doc_error else err))
@@ -447,7 +521,8 @@ class CompletionThread(threading.Thread):
 				latest_usage = usage
 			if not getattr(event, "choices", None) or len(event.choices) < 1:
 				continue
-			delta = event.choices[0].delta
+			choice = event.choices[0]
+			delta = choice.delta
 			if delta and getattr(delta, "reasoning", ""):
 				if "firstTokenAt" not in block.timing:
 					block.timing["firstTokenAt"] = time.time()
@@ -457,15 +532,29 @@ class CompletionThread(threading.Thread):
 				if "firstTokenAt" not in block.timing:
 					block.timing["firstTokenAt"] = time.time()
 				speechBuffer += text
-				if speechBuffer.endswith("\n") or speechBuffer.endswith(". ") or speechBuffer.endswith("? ") or speechBuffer.endswith("! ") or speechBuffer.endswith(": "):
+				punct_flush = (
+					speechBuffer.endswith("\n")
+					or speechBuffer.endswith(". ")
+					or speechBuffer.endswith("? ")
+					or speechBuffer.endswith("! ")
+					or speechBuffer.endswith(": ")
+				)
+				len_flush = len(speechBuffer) >= _STREAM_SPEECH_FLUSH_CHARS
+				if punct_flush or len_flush:
 					if speechBuffer.strip():
 						if hasattr(wnd, "canAutoReadStreamingResponse") and wnd.canAutoReadStreamingResponse():
-							wnd.message(speechBuffer, speechOnly=True, onPromptFieldOnly=False)
+							speech_plain = _strip_markdown_for_speech(speechBuffer)
+							if speech_plain:
+								wnd.message(speech_plain, speechOnly=True, onPromptFieldOnly=False)
 					speechBuffer = ""
 				block.responseText += text
+			if getattr(choice, "finish_reason", None):
+				break
 		if speechBuffer:
 			if hasattr(wnd, "canAutoReadStreamingResponse") and wnd.canAutoReadStreamingResponse():
-				wnd.message(speechBuffer, speechOnly=True, onPromptFieldOnly=False)
+				speech_plain = _strip_markdown_for_speech(speechBuffer)
+				if speech_plain:
+					wnd.message(speech_plain, speechOnly=True, onPromptFieldOnly=False)
 		if isinstance(latest_usage, dict) and latest_usage:
 			block.usage = {
 				"input_tokens": int(latest_usage.get("input_tokens", 0) or 0),
@@ -532,7 +621,9 @@ class CompletionThread(threading.Thread):
 		block.responseText += text
 		if not played_audio and text:
 			if hasattr(wnd, "canAutoReadStreamingResponse") and wnd.canAutoReadStreamingResponse():
-				wnd.message(text, speechOnly=True, onPromptFieldOnly=False)
+				speech_plain = _strip_markdown_for_speech(text)
+				if speech_plain:
+					wnd.message(speech_plain, speechOnly=True, onPromptFieldOnly=False)
 		block.responseTerminated = True
 
 

@@ -1,10 +1,28 @@
-# coding: UTF-8
 """Shared helpers for message/conversation properties views."""
+
+import re
 
 import addonHandler
 from html import escape
 
 addonHandler.initTranslation()
+
+
+def _normalize_reasoning_for_properties(raw: str) -> str:
+	"""Unwrap literal <think>...</think> segments stored on HistoryBlock.
+
+	Providers (e.g. Anthropic summarized thinking) emit those tags inside the reasoning channel.
+	Message properties used to wrap the whole body in similar markers too, which duplicated them."""
+	t = (raw or "").strip()
+	if not t:
+		return ""
+	pat = re.compile(r"<think>\s*(.*?)\s*</think>", re.DOTALL | re.IGNORECASE)
+	prev = None
+	while prev != t:
+		prev = t
+		t = pat.sub(lambda m: (m.group(1) or "").strip(), t)
+	t = re.sub(r"\n{3,}", "\n\n", t).strip()
+	return t
 
 
 def _to_int(value):
@@ -124,7 +142,7 @@ def build_message_properties_html(block, unknown_model_label):
 	audio_list = getattr(block, "audioPathList", None) or []
 	usage = getattr(block, "usage", {}) or {}
 	timing = getattr(block, "timing", {}) or {}
-	reasoning_text = (getattr(block, "reasoningText", "") or "").strip()
+	reasoning_text = _normalize_reasoning_for_properties(getattr(block, "reasoningText", "") or "")
 	html = [
 		f"<h1>{_fmt(_('Message properties'))}</h1>",
 		f"<h2>{_fmt(_('Overview'))}</h2>",
@@ -141,6 +159,19 @@ def build_message_properties_html(block, unknown_model_label):
 		html.append(_li(_("Temperature"), block.temperature))
 	if getattr(block, "topP", None) is not None:
 		html.append(_li(_("Top P"), block.topP))
+	if getattr(block, "seed", None) is not None:
+		html.append(_li(_("Seed"), block.seed))
+	if getattr(block, "topK", None) is not None:
+		html.append(_li(_("Top K"), block.topK))
+	st_txt = (getattr(block, "stopText", "") or "").strip()
+	if st_txt:
+		if len(st_txt) > 200:
+			st_txt = st_txt[:200] + "…"
+		html.append(_li(_("Stop sequences"), st_txt))
+	if getattr(block, "frequencyPenalty", None) is not None:
+		html.append(_li(_("Frequency penalty"), block.frequencyPenalty))
+	if getattr(block, "presencePenalty", None) is not None:
+		html.append(_li(_("Presence penalty"), block.presencePenalty))
 	html.append("</ul>")
 
 	html.extend([f"<h2>{_fmt(_('Token usage'))}</h2>", "<ul>"])
@@ -152,7 +183,6 @@ def build_message_properties_html(block, unknown_model_label):
 			html.append(f"<li>{_fmt(line)}</li>")
 	html.append("</ul>")
 
-	# Timing + throughput section
 	timing_items = []
 	elapsed = _to_float(timing.get("elapsedSec"))
 	if isinstance(elapsed, float):
@@ -176,7 +206,6 @@ def build_message_properties_html(block, unknown_model_label):
 	if isinstance(total_tok_s, float):
 		timing_items.append((_('Mean total speed'), f"{total_tok_s:.2f} tok/s"))
 	if not timing_items and not isinstance(elapsed, float):
-		# Last-resort throughput when only elapsed + tokens are available.
 		elapsed_fallback = _to_float(timing.get("elapsedSec"))
 		if isinstance(elapsed_fallback, float) and elapsed_fallback > 0:
 			output_tokens = _to_int(usage.get("output_tokens")) or _to_int(usage.get("completion_tokens"))
@@ -191,14 +220,9 @@ def build_message_properties_html(block, unknown_model_label):
 			html.append(_li(label, value))
 		html.append("</ul>")
 	if reasoning_text:
-		think_body = f"&lt;think&gt;\n{escape(reasoning_text)}\n&lt;/think&gt;"
 		html.extend([
-			f"<h2>{_fmt(_('Thinking'))}</h2>",
-			"<details open>",
-			f"<summary>{_fmt(_('Show thinking block'))}</summary>",
-			"<p><code>&lt;think&gt; ... &lt;/think&gt;</code></p>",
-			f"<pre>{think_body}</pre>",
-			"</details>",
+			f"<h2>{_fmt(_('Reasoning text'))}</h2>",
+			f"<pre>{escape(reasoning_text)}</pre>",
 		])
 
 	return "".join(html)

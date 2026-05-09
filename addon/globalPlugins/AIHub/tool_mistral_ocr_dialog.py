@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Dedicated dialog for Mistral OCR."""
 
 import base64
@@ -14,7 +13,14 @@ import wx
 from logHandler import log
 
 from .conversations import ConversationFormat
-from .consts import SND_CHAT_RESPONSE_RECEIVED, SND_PROGRESS, stop_progress_sound
+from .consts import (
+	SND_CHAT_RESPONSE_RECEIVED,
+	SND_PROGRESS,
+	stop_progress_sound,
+	UI_DIALOG_BORDER_PX,
+	UI_FORM_ROW_BORDER_PX,
+	UI_SECTION_SPACING_PX,
+)
 from .mediastore import build_media_path
 from .providertools_helpers import add_labeled_factory, extract_ocr_text, safe_int
 from .tool_dialog_base import ToolDialogBase
@@ -60,16 +66,16 @@ class MistralOCRToolDialog(ToolDialogBase):
 		self.sourceText.Bind(wx.EVT_TEXT, lambda evt: (self._syncOpenButtons(), evt.Skip()))
 		self.browseSourceBtn = wx.Button(self.formPanel, label=_("Browse OCR source..."))
 		self.browseSourceBtn.Bind(wx.EVT_BUTTON, self.onBrowseSource)
-		main.Add(self.browseSourceBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		main.Add(self.browseSourceBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		self.openSourceBtn = wx.Button(self.formPanel, label=_("Open source"))
 		self.openSourceBtn.Bind(wx.EVT_BUTTON, self.onOpenSource)
-		main.Add(self.openSourceBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		main.Add(self.openSourceBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		self.openTextResultBtn = wx.Button(self.formPanel, label=_("Open OCR text result"))
 		self.openTextResultBtn.Bind(wx.EVT_BUTTON, self.onOpenTextResult)
-		main.Add(self.openTextResultBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		main.Add(self.openTextResultBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		self.openJsonResultBtn = wx.Button(self.formPanel, label=_("Open OCR JSON result"))
 		self.openJsonResultBtn.Bind(wx.EVT_BUTTON, self.onOpenJsonResult)
-		main.Add(self.openJsonResultBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		main.Add(self.openJsonResultBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		self.pagesText = add_labeled_factory(
 			self.formPanel,
 			main,
@@ -117,9 +123,9 @@ class MistralOCRToolDialog(ToolDialogBase):
 		)
 		for choice in (self.tableFormatChoice, self.docAnnotationChoice, self.bboxAnnotationChoice):
 			choice.SetSelection(0)
-		main.Add(self.includeImageB64Check, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
-		main.Add(self.extractHeaderCheck, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
-		main.Add(self.extractFooterCheck, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		main.Add(self.includeImageB64Check, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
+		main.Add(self.extractHeaderCheck, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
+		main.Add(self.extractFooterCheck, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 
 		buttons = wx.BoxSizer(wx.HORIZONTAL)
 		self.runBtn = wx.Button(self.formPanel, label=_("Run OCR"))
@@ -127,12 +133,12 @@ class MistralOCRToolDialog(ToolDialogBase):
 		self.bind_ctrl_enter_submit(self.onRun)
 		self.closeBtn = wx.Button(self.formPanel, id=wx.ID_CLOSE)
 		self.closeBtn.Bind(wx.EVT_BUTTON, self.onClose)
-		buttons.Add(self.runBtn, 0, wx.ALL, 5)
-		buttons.Add(self.closeBtn, 0, wx.ALL, 5)
-		main.Add(buttons, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
+		buttons.Add(self.runBtn, 0, wx.ALL, UI_SECTION_SPACING_PX)
+		buttons.Add(self.closeBtn, 0, wx.ALL, UI_SECTION_SPACING_PX)
+		main.Add(buttons, 0, wx.ALIGN_RIGHT | wx.ALL, UI_SECTION_SPACING_PX)
 
 		self.formPanel.SetSizer(main)
-		dialogSizer.Add(self.formPanel, 1, wx.EXPAND | wx.ALL, 6)
+		dialogSizer.Add(self.formPanel, 1, wx.EXPAND | wx.ALL, UI_DIALOG_BORDER_PX)
 		self.SetSizer(dialogSizer)
 		if parent:
 			self.CentreOnParent(wx.BOTH)

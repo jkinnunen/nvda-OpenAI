@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Chat history: TextSegment and HistoryBlock for the messages control."""
 
 
@@ -102,6 +101,11 @@ class HistoryBlock:
 	model = ""
 	temperature = 0
 	topP = 0
+	seed = None
+	topK = None
+	stopText = ""
+	frequencyPenalty = None
+	presencePenalty = None
 	displayHeader = True
 	focused = False
 	responseTerminated = False

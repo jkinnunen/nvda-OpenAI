@@ -1,4 +1,3 @@
-# coding: UTF-8
 """Dedicated dialog for Mistral Speech to Text."""
 
 import json
@@ -15,7 +14,14 @@ from logHandler import log
 
 from .apiclient import APIConnectionError, APIStatusError, _resolve_error_message
 from .conversations import ConversationFormat
-from .consts import SND_CHAT_RESPONSE_RECEIVED, SND_PROGRESS, stop_progress_sound
+from .consts import (
+	SND_CHAT_RESPONSE_RECEIVED,
+	SND_PROGRESS,
+	stop_progress_sound,
+	UI_DIALOG_BORDER_PX,
+	UI_FORM_ROW_BORDER_PX,
+	UI_SECTION_SPACING_PX,
+)
 from .mediastore import build_media_path
 from .providertools_helpers import add_labeled_factory, safe_float
 from .tool_dialog_base import ToolDialogBase
@@ -73,16 +79,16 @@ class MistralSpeechToTextToolDialog(ToolDialogBase):
 		self.inputAudioPathText.Bind(wx.EVT_TEXT, lambda evt: (self._syncOpenButtons(), evt.Skip()))
 		self.browseInputBtn = wx.Button(self.formPanel, label=_("Browse input audio..."))
 		self.browseInputBtn.Bind(wx.EVT_BUTTON, self.onBrowseInputAudio)
-		main.Add(self.browseInputBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		main.Add(self.browseInputBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		self.openInputBtn = wx.Button(self.formPanel, label=_("Open input audio"))
 		self.openInputBtn.Bind(wx.EVT_BUTTON, self.onOpenInputAudio)
-		main.Add(self.openInputBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		main.Add(self.openInputBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		self.openTextResultBtn = wx.Button(self.formPanel, label=_("Open transcription text result"))
 		self.openTextResultBtn.Bind(wx.EVT_BUTTON, self.onOpenTextResult)
-		main.Add(self.openTextResultBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		main.Add(self.openTextResultBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		self.openRawResultBtn = wx.Button(self.formPanel, label=_("Open raw transcription result"))
 		self.openRawResultBtn.Bind(wx.EVT_BUTTON, self.onOpenRawResult)
-		main.Add(self.openRawResultBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		main.Add(self.openRawResultBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 
 		self.modelChoice = add_labeled_factory(
 			self.formPanel,
@@ -102,7 +108,7 @@ class MistralSpeechToTextToolDialog(ToolDialogBase):
 			lambda: wx.TextCtrl(self.formPanel, value=""),
 		)
 		self.diarizeCheck = wx.CheckBox(self.formPanel, label=_("Enable speaker diarization"))
-		main.Add(self.diarizeCheck, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		main.Add(self.diarizeCheck, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		self.contextBiasText = add_labeled_factory(
 			self.formPanel,
 			main,
@@ -128,12 +134,12 @@ class MistralSpeechToTextToolDialog(ToolDialogBase):
 		self.bind_ctrl_enter_submit(self.onRun)
 		self.closeBtn = wx.Button(self.formPanel, id=wx.ID_CLOSE)
 		self.closeBtn.Bind(wx.EVT_BUTTON, self.onClose)
-		buttons.Add(self.runBtn, 0, wx.ALL, 5)
-		buttons.Add(self.closeBtn, 0, wx.ALL, 5)
-		main.Add(buttons, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
+		buttons.Add(self.runBtn, 0, wx.ALL, UI_SECTION_SPACING_PX)
+		buttons.Add(self.closeBtn, 0, wx.ALL, UI_SECTION_SPACING_PX)
+		main.Add(buttons, 0, wx.ALIGN_RIGHT | wx.ALL, UI_SECTION_SPACING_PX)
 
 		self.formPanel.SetSizer(main)
-		dialogSizer.Add(self.formPanel, 1, wx.EXPAND | wx.ALL, 6)
+		dialogSizer.Add(self.formPanel, 1, wx.EXPAND | wx.ALL, UI_DIALOG_BORDER_PX)
 		self.SetSizer(dialogSizer)
 		if parent:
 			self.CentreOnParent(wx.BOTH)
@@ -399,7 +405,6 @@ class MistralSpeechToTextToolDialog(ToolDialogBase):
 			self.timestampGranularitiesText.SetFocus()
 			return
 		if diarize:
-			# Mistral requires diarization to use segment granularity.
 			if not timestamp_granularities:
 				timestamp_granularities = ["segment"]
 				self.timestampGranularitiesText.SetValue("segment")

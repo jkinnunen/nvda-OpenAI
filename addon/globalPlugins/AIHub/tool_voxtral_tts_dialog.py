@@ -12,7 +12,14 @@ from logHandler import log
 
 from .apiclient import APIConnectionError, APIStatusError
 from .conversations import ConversationFormat
-from .consts import SND_CHAT_RESPONSE_RECEIVED, SND_PROGRESS, stop_progress_sound
+from .consts import (
+	SND_CHAT_RESPONSE_RECEIVED,
+	SND_PROGRESS,
+	stop_progress_sound,
+	UI_DIALOG_BORDER_PX,
+	UI_FORM_ROW_BORDER_PX,
+	UI_SECTION_SPACING_PX,
+)
 from .mediastore import build_media_path, persist_local_file
 from .providertools_helpers import add_labeled_factory
 from .tool_dialog_base import ToolDialogBase
@@ -25,8 +32,6 @@ class VoxtralTTSToolDialog(ToolDialogBase):
 		"voxtral-mini-tts-latest",
 		"voxtral-mini-tts-2603",
 	)
-	# Official docs expose custom/account voices via /v1/audio/voices.
-	# Keep the static list neutral; real voices are loaded from the API.
 	SUGGESTED_VOICE_IDS = (
 		"",
 	)
@@ -104,21 +109,21 @@ class VoxtralTTSToolDialog(ToolDialogBase):
 		self.refAudioText.Bind(wx.EVT_TEXT, lambda evt: (self._syncOpenButtons(), evt.Skip()))
 		self.browseRefAudioBtn = wx.Button(self.formPanel, label=_("Browse reference audio..."))
 		self.browseRefAudioBtn.Bind(wx.EVT_BUTTON, self.onBrowseRefAudio)
-		voiceBox.Add(self.browseRefAudioBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		voiceBox.Add(self.browseRefAudioBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		self.openRefAudioBtn = wx.Button(self.formPanel, label=_("Open reference audio"))
 		self.openRefAudioBtn.Bind(wx.EVT_BUTTON, self.onOpenReferenceAudio)
-		voiceBox.Add(self.openRefAudioBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		voiceBox.Add(self.openRefAudioBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		voiceHint = wx.StaticText(
 			self.formPanel,
 			label=_("Use a saved voice ID or provide a reference audio clip for voice cloning."),
 		)
-		voiceBox.Add(voiceHint, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		voiceBox.Add(voiceHint, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		self.refreshVoicesBtn = wx.Button(self.formPanel, label=_("Refresh voices"))
 		self.refreshVoicesBtn.Bind(wx.EVT_BUTTON, self.onRefreshVoices)
-		voiceBox.Add(self.refreshVoicesBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		voiceBox.Add(self.refreshVoicesBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		self.openGeneratedAudioBtn = wx.Button(self.formPanel, label=_("Open generated audio"))
 		self.openGeneratedAudioBtn.Bind(wx.EVT_BUTTON, self.onOpenGeneratedAudio)
-		outputBox.Add(self.openGeneratedAudioBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+		outputBox.Add(self.openGeneratedAudioBtn, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 
 		buttons = wx.BoxSizer(wx.HORIZONTAL)
 		self.runBtn = wx.Button(self.formPanel, label=_("Generate speech"))
@@ -126,17 +131,17 @@ class VoxtralTTSToolDialog(ToolDialogBase):
 		self.bind_ctrl_enter_submit(self.onRun)
 		self.closeBtn = wx.Button(self.formPanel, id=wx.ID_CLOSE)
 		self.closeBtn.Bind(wx.EVT_BUTTON, self.onClose)
-		buttons.Add(self.runBtn, 0, wx.ALL, 5)
-		buttons.Add(self.closeBtn, 0, wx.ALL, 5)
-		outputBox.Add(buttons, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
+		buttons.Add(self.runBtn, 0, wx.ALL, UI_SECTION_SPACING_PX)
+		buttons.Add(self.closeBtn, 0, wx.ALL, UI_SECTION_SPACING_PX)
+		outputBox.Add(buttons, 0, wx.ALIGN_RIGHT | wx.ALL, UI_SECTION_SPACING_PX)
 
-		main.Add(accountBox, 0, wx.EXPAND | wx.BOTTOM, 6)
-		main.Add(requestBox, 0, wx.EXPAND | wx.BOTTOM, 6)
-		main.Add(voiceBox, 0, wx.EXPAND | wx.BOTTOM, 6)
+		main.Add(accountBox, 0, wx.EXPAND | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
+		main.Add(requestBox, 0, wx.EXPAND | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
+		main.Add(voiceBox, 0, wx.EXPAND | wx.BOTTOM, UI_FORM_ROW_BORDER_PX)
 		main.Add(outputBox, 0, wx.EXPAND | wx.BOTTOM, 2)
 
 		self.formPanel.SetSizer(main)
-		dialogSizer.Add(self.formPanel, 1, wx.EXPAND | wx.ALL, 6)
+		dialogSizer.Add(self.formPanel, 1, wx.EXPAND | wx.ALL, UI_DIALOG_BORDER_PX)
 		self.SetSizer(dialogSizer)
 		if parent:
 			self.CentreOnParent(wx.BOTH)
