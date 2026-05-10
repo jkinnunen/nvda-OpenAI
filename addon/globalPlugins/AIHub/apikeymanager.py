@@ -1,32 +1,24 @@
 import json
 import os
 import uuid
-from .consts import BASE_URLs
-
-AVAILABLE_PROVIDERS = [
-	"OpenAI",
-	"DeepSeek",
-	"CustomOpenAI",
-	"Ollama",
-	"MistralAI",
-	"OpenRouter",
-	"Anthropic",
-	"xAI",
-	"Google",
-]
+from .consts import AVAILABLE_PROVIDERS, BASE_URLs, Provider
 
 # Common environment variable names per provider (tried in order; first non-empty wins)
 _ENV_KEYS = {
-	"OpenAI": ("OPENAI_API_KEY", "OPENAI_KEY"),
-	"DeepSeek": ("DEEPSEEK_API_KEY",),
-	"CustomOpenAI": ("OPENAI_COMPAT_API_KEY", "OPENAI_API_KEY", "OPENAI_KEY"),
-	"Ollama": ("OLLAMA_API_KEY",),
-	"MistralAI": ("MISTRAL_API_KEY", "MISTRALAI_API_KEY"),
-	"OpenRouter": ("OPENROUTER_API_KEY",),
-	"Anthropic": ("ANTHROPIC_API_KEY", "ANTHROPIC_KEY"),
-	"xAI": ("XAI_API_KEY", "XAI_KEY"),
-	"Google": ("GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_AI_API_KEY"),
+	Provider.OpenAI: ("OPENAI_API_KEY", "OPENAI_KEY"),
+	Provider.DeepSeek: ("DEEPSEEK_API_KEY",),
+	Provider.CustomOpenAI: ("OPENAI_COMPAT_API_KEY", "OPENAI_API_KEY", "OPENAI_KEY"),
+	Provider.Ollama: ("OLLAMA_API_KEY",),
+	Provider.MistralAI: ("MISTRAL_API_KEY", "MISTRALAI_API_KEY"),
+	Provider.OpenRouter: ("OPENROUTER_API_KEY",),
+	Provider.Anthropic: ("ANTHROPIC_API_KEY", "ANTHROPIC_KEY"),
+	Provider.xAI: ("XAI_API_KEY", "XAI_KEY"),
+	Provider.Google: ("GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_AI_API_KEY"),
 }
+
+# Providers whose endpoint URL is stored per-account (custom Ollama host, etc.)
+# rather than baked into the addon's BASE_URLs table.
+_USER_ENDPOINT_PROVIDERS = (Provider.CustomOpenAI, Provider.Ollama)
 
 _managers = {}
 _store_cache_by_dir = {}
@@ -55,7 +47,7 @@ def _normalize_ollama_base_url(url):
 		if host:
 			raw = host
 	if not raw:
-		return BASE_URLs.get("Ollama", "http://127.0.0.1:11434/v1")
+		return BASE_URLs.get(Provider.Ollama, "http://127.0.0.1:11434/v1")
 	if "://" not in raw:
 		raw = f"http://{raw}"
 	raw = raw.rstrip("/")
@@ -71,9 +63,9 @@ def _normalize_account(raw, provider=None):
 	api_key = (raw.get("api_key") or "").strip()
 	if not isinstance(acc_id, str):
 		return None
-	if provider in ("CustomOpenAI", "Ollama"):
+	if provider in _USER_ENDPOINT_PROVIDERS:
 		base_url = (raw.get("base_url") or "").strip()
-		if provider == "Ollama":
+		if provider == Provider.Ollama:
 			base_url = _normalize_ollama_base_url(base_url)
 	else:
 		# Fixed-endpoint providers: never persist a per-account URL (JSON null).
@@ -109,7 +101,7 @@ def _normalize_provider_bucket(raw_bucket, provider=None):
 class APIKeyManager:
 	"""Manage API keys/accounts for one provider."""
 
-	def __init__(self, data_dir, provider="OpenAI"):
+	def __init__(self, data_dir, provider=Provider.OpenAI):
 		if provider not in AVAILABLE_PROVIDERS:
 			raise ValueError(f"Unknown provider: {provider}")
 		self.data_dir = data_dir
@@ -232,9 +224,9 @@ class APIKeyManager:
 				"org_name": (org_name or "").strip(),
 				"org_key": (org_key or "").strip(),
 			}
-			if provider == "Ollama":
+			if provider == Provider.Ollama:
 				legacy_acc["base_url"] = _normalize_ollama_base_url("")
-			elif provider != "CustomOpenAI":
+			elif provider != Provider.CustomOpenAI:
 				legacy_acc["base_url"] = None
 			store["providers"][provider] = {
 				"active_account_id": acc_id,
@@ -267,7 +259,7 @@ class APIKeyManager:
 			norm = _normalize_account(acc, self.provider)
 			if norm is not None:
 				accounts.append(norm)
-		if include_env and not accounts and self.provider != "CustomOpenAI":
+		if include_env and not accounts and self.provider != Provider.CustomOpenAI:
 			env_api = self._get_env_api_key(_ENV_KEYS.get(self.provider, ()))
 			if env_api:
 				accounts.append({
@@ -324,15 +316,15 @@ class APIKeyManager:
 			"org_name": (org_name or "").strip(),
 			"org_key": (org_key or "").strip(),
 		}
-		if self.provider == "CustomOpenAI":
+		if self.provider == Provider.CustomOpenAI:
 			account["base_url"] = (base_url or "").strip()
 			if not account["base_url"]:
 				raise ValueError("Custom provider URL is required")
-		elif self.provider == "Ollama":
+		elif self.provider == Provider.Ollama:
 			account["base_url"] = _normalize_ollama_base_url((base_url or "").strip())
 		else:
 			account["base_url"] = None
-		if self.provider != "Ollama" and not account["api_key"]:
+		if self.provider != Provider.Ollama and not account["api_key"]:
 			raise ValueError("API key is required")
 		bucket.setdefault("accounts", []).append(account)
 		if set_active or not bucket.get("active_account_id"):
@@ -358,9 +350,9 @@ class APIKeyManager:
 				acc["org_key"] = (org_key or "").strip()
 			if base_url is not None:
 				acc["base_url"] = (base_url or "").strip()
-			if self.provider == "Ollama":
+			if self.provider == Provider.Ollama:
 				acc["base_url"] = _normalize_ollama_base_url(acc.get("base_url") or "")
-			elif self.provider == "CustomOpenAI":
+			elif self.provider == Provider.CustomOpenAI:
 				if not (acc.get("base_url") or "").strip():
 					raise ValueError("Custom provider URL is required")
 			else:
@@ -395,10 +387,10 @@ class APIKeyManager:
 				return self._get_env_api_key(("OPEN_AI_ORG_API_KEY",))
 			return self._get_env_api_key(("OPEN_AI_ORG_API_KEY",))
 
-		if self.provider == "Ollama":
+		if self.provider == Provider.Ollama:
 			if account and account.get("api_key"):
 				return account.get("api_key")
-			return self._get_env_api_key(_ENV_KEYS.get("Ollama", ()))
+			return self._get_env_api_key(_ENV_KEYS.get(Provider.Ollama, ()))
 		if account and account.get("api_key"):
 			return account.get("api_key")
 		if account_id == "__env__":
@@ -419,12 +411,12 @@ class APIKeyManager:
 
 	def get_base_url(self, account_id=None):
 		account = self.get_account(account_id) if account_id else self.get_active_account()
-		if self.provider == "Ollama":
+		if self.provider == Provider.Ollama:
 			if not isinstance(account, dict):
 				return None
 			value = (account.get("base_url") if account else "") if isinstance(account, dict) else ""
 			return _normalize_ollama_base_url(value)
-		if self.provider == "CustomOpenAI":
+		if self.provider == Provider.CustomOpenAI:
 			if account and isinstance(account, dict):
 				return (account.get("base_url") or "").strip() or None
 			return None
@@ -444,12 +436,12 @@ class APIKeyManager:
 			self.add_account(name="Account", api_key=key, set_active=True)
 
 	def isReady(self, account_id=None):
-		if self.provider == "Ollama":
+		if self.provider == Provider.Ollama:
 			account = self.get_account(account_id) if account_id else self.get_active_account()
 			if not isinstance(account, dict):
 				return False
 			return bool(self.get_base_url(account_id=account_id))
-		if self.provider == "CustomOpenAI":
+		if self.provider == Provider.CustomOpenAI:
 			base_url = self.get_base_url(account_id=account_id)
 			if base_url and base_url.strip():
 				return True
@@ -470,8 +462,8 @@ def load(data_dir: str):
 		_managers[provider] = APIKeyManager(data_dir, provider)
 
 
-def get(provider_name: str) -> APIKeyManager:
-	"""Get API key manager for provider_name."""
+def get(provider_name) -> APIKeyManager:
+	"""Get API key manager for provider_name (accepts Provider enum or its str value)."""
 	if provider_name not in AVAILABLE_PROVIDERS:
 		raise ValueError(f"Unknown provider: {provider_name}. Available: {AVAILABLE_PROVIDERS}")
 	return _managers[provider_name]

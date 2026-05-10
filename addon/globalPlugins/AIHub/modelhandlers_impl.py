@@ -7,8 +7,13 @@ import gui
 import ui
 
 from . import apikeymanager
+from .consts import Provider
 from .modeldetailsutils import build_model_details_html
 from .model import clearModelCache, getModels
+
+
+# Providers whose model listing depends on a per-account base URL.
+_USER_ENDPOINT_PROVIDERS = (Provider.CustomOpenAI, Provider.Ollama)
 
 addonHandler.initTranslation()
 
@@ -40,7 +45,7 @@ class ModelHandlersMixin:
 	def _accountLabel(self, account):
 		name = account.get("name") or _("Account")
 		label = f"{account['provider']} / {name}"
-		if account.get("provider") in ("CustomOpenAI", "Ollama") and account.get("base_url"):
+		if account.get("provider") in _USER_ENDPOINT_PROVIDERS and account.get("base_url"):
 			label = f"{label} - {account['base_url']}"
 		return label
 
@@ -236,7 +241,7 @@ class ModelHandlersMixin:
 		last_model = self.data.get("lastModel")
 		if isinstance(last_model, str) and last_model:
 			return last_model
-		return self.conf["modelVision" if self.pathList else "model"]
+		return self.conf["modelVision" if self.filesList else "model"]
 
 	def _persistCurrentModelSelection(self, model):
 		if not model:

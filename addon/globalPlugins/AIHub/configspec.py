@@ -1,13 +1,9 @@
 import config
 from .consts import (
 	DEFAULT_MODEL,
-	DEFAULT_MODEL_VISION,
 	DEFAULT_TOP_P,
-	DEFAULT_N,
 	TOP_P_MIN,
 	TOP_P_MAX,
-	N_MIN,
-	N_MAX,
 	TTS_MODELS,
 	TTS_DEFAULT_MODEL,
 	TTS_VOICES,
@@ -22,9 +18,8 @@ from .consts import (
 
 confSpecs = {
 	"model": f"string(default={DEFAULT_MODEL})",
-	"modelVision": f"string(default={DEFAULT_MODEL_VISION})",
+	"modelVision": f"string(default={DEFAULT_MODEL})",
 	"topP": f"integer(min={TOP_P_MIN}, max={TOP_P_MAX}, default={DEFAULT_TOP_P})",
-	"n": f"integer(min={N_MIN}, max={N_MAX}, default={DEFAULT_N})",
 	"stream": "boolean(default=True)",
 	"reasoningEffort": f"option({', '.join(REASONING_EFFORT_OPTIONS)}, default={DEFAULT_REASONING_EFFORT})",
 	"adaptiveThinking": "boolean(default=True)",

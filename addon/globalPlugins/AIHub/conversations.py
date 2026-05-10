@@ -12,7 +12,7 @@ import addonHandler
 from logHandler import log
 
 from .consts import DATA_DIR, ensure_dir_exists
-from .image_file import ImageFile
+from .image_file import AttachmentFile
 from .mediastore import persist_local_file
 
 addonHandler.initTranslation()
@@ -337,19 +337,21 @@ def _block_to_dict(block) -> dict:
 	timing = getattr(block, "timing", None)
 	if isinstance(timing, dict) and timing:
 		d["timing"] = timing
-	path_list = getattr(block, "pathList", None)
-	if path_list:
+	# JSON key is intentionally still ``pathList`` to keep older saved
+	# conversations forward-readable; the in-code attribute is ``filesList``.
+	files_list = getattr(block, "filesList", None)
+	if files_list:
 		d["pathList"] = [
 			{
 				"path": persist_local_file(
-					(getattr(img, "path", img) if hasattr(img, "path") else img),
+					(getattr(att, "path", att) if hasattr(att, "path") else att),
 					"images",
 					prefix="image",
 					fallback_ext=".png",
 				),
-				"name": getattr(img, "name", ""),
+				"name": getattr(att, "name", ""),
 			}
-			for img in path_list
+			for att in files_list
 		]
 	else:
 		d["pathList"] = []
@@ -374,8 +376,11 @@ def _block_to_dict(block) -> dict:
 	return d
 
 
-def _dict_to_img(item, conv_id: str, block_idx: int, img_idx: int) -> ImageFile | None:
-	"""Deserialize image dict. Restores base64 to persistent file; URLs used as-is."""
+def _dict_to_img(item, conv_id: str, block_idx: int, img_idx: int):
+	"""Deserialize one attachment dict. Restores base64 to persistent file; URLs used as-is.
+
+	Returns an :class:`AttachmentFile` (image or document) or ``None``.
+	"""
 	if isinstance(item, str):
 		path, name, b64 = item, "", None
 	elif isinstance(item, dict):
@@ -397,7 +402,7 @@ def _dict_to_img(item, conv_id: str, block_idx: int, img_idx: int) -> ImageFile 
 			data = base64.b64decode(b64)
 			with open(stored_path, "wb") as f:
 				f.write(data)
-			return ImageFile(stored_path, name=name or None)
+			return AttachmentFile(stored_path, name=name or None)
 		except Exception as err:
 			log.warning(f"conversations: could not restore image {stored_path}: {err}")
 			return None
@@ -406,7 +411,7 @@ def _dict_to_img(item, conv_id: str, block_idx: int, img_idx: int) -> ImageFile 
 	# URL or existing path
 	if path.startswith("http://") or path.startswith("https://") or os.path.exists(path):
 		try:
-			return ImageFile(path, name=name or None)
+			return AttachmentFile(path, name=name or None)
 		except Exception as err:
 			log.warning(f"conversations: skipped image {path}: {err}")
 	return None
@@ -433,8 +438,10 @@ def _dict_to_block(d: dict, conv_id: str = "", block_idx: int = 0):
 	block.timing = d.get("timing") if isinstance(d.get("timing"), dict) else {}
 	block.responseTerminated = True
 	block.displayHeader = False
+	# JSON key is still the legacy ``pathList`` for forward-compat with older
+	# saved conversations; map it onto the new ``filesList`` attribute.
 	path_list = d.get("pathList", [])
-	block.pathList = []
+	block.filesList = []
 	for i, item in enumerate(path_list):
 		img = _dict_to_img(item, conv_id, block_idx, i) if conv_id and isinstance(item, dict) else None
 		if img is None and isinstance(item, dict):
@@ -442,16 +449,16 @@ def _dict_to_block(d: dict, conv_id: str = "", block_idx: int = 0):
 			name = item.get("name", "")
 			if path and (path.startswith("http://") or path.startswith("https://") or os.path.exists(path)):
 				try:
-					img = ImageFile(path, name=name or None)
+					img = AttachmentFile(path, name=name or None)
 				except Exception as err:
 					log.warning(f"conversations: skipped image {path}: {err}")
 		elif img is None and isinstance(item, str) and item:
 			try:
-				img = ImageFile(item)
+				img = AttachmentFile(item)
 			except Exception as err:
 				log.warning(f"conversations: skipped image {item}: {err}")
 		if img is not None:
-			block.pathList.append(img)
+			block.filesList.append(img)
 	audio_list = d.get("audioPathList", [])
 	block.audioPathList = [p for p in audio_list if p and isinstance(p, str)]
 	audio_path = d.get("audioPath")

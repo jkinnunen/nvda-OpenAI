@@ -6,7 +6,6 @@ import winsound
 from enum import StrEnum, auto
 import globalVars
 import addonHandler
-from .model import Model
 
 addonHandler.initTranslation()
 
@@ -85,21 +84,54 @@ def cleanup_temp_dir():
 			logHandler.log.error(f"cleanup_temp_dir: {err}", exc_info=True)
 
 DEFAULT_TOP_P = 100
-DEFAULT_N = 1
 TOP_P_MIN = 0
 TOP_P_MAX = 100
-N_MIN = 1
-N_MAX = 10
 TTS_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
 TTS_DEFAULT_VOICE = "nova"
 TTS_MODELS = ["tts-1", "tts-1-hd"]
 TTS_DEFAULT_MODEL = "tts-1"
 
 DEFAULT_MODEL = "gpt-5"
-DEFAULT_MODEL_VISION = "gpt-5"
 
 WHISPER_MODELS = ["whisper-1"]
 VOXTRAL_MODELS = ["voxtral-mini-latest"]
+
+
+class Provider(StrEnum):
+	"""Canonical chat-completion provider identifiers.
+
+	Member names are used verbatim as the enum value (via the override of
+	``_generate_next_value_`` below) so they double as the on-disk identifier
+	stored in ``accounts.json``, the user config, conversation files, and the
+	various provider-keyed dicts (``BASE_URLs``, ``PROVIDER_URL``, ...).
+
+	Because ``StrEnum`` is a ``str`` subclass, comparisons like
+	``model.provider == Provider.OpenAI`` work even when the left-hand side is
+	a plain string read from JSON. New code SHOULD prefer enum members over
+	string literals so a typo becomes an ``AttributeError`` at import time.
+	"""
+
+	@staticmethod
+	def _generate_next_value_(name, start, count, last_values):
+		# Default StrEnum auto() lowercases the name; we want to keep the
+		# original casing (``OpenAI``, ``MistralAI``, ``xAI`` ...) which is the
+		# identifier persisted on disk and used as dict keys throughout the
+		# addon. Member names are intentionally not UPPER_CASE for the same
+		# reason.
+		return name
+
+	OpenAI = auto()
+	MistralAI = auto()
+	DeepSeek = auto()
+	CustomOpenAI = auto()
+	Ollama = auto()
+	OpenRouter = auto()
+	Anthropic = auto()
+	xAI = auto()
+	Google = auto()
+
+
+AVAILABLE_PROVIDERS = tuple(p.value for p in Provider)
 
 
 class TranscriptionProvider(StrEnum):
@@ -114,6 +146,13 @@ DEFAULT_TRANSCRIPTION_PROVIDER = TranscriptionProvider.OPENAI.value
 # Reasoning effort levels (unified; each provider may support a subset)
 
 class ReasoningEffort(StrEnum):
+	"""Standard reasoning_effort string values; each provider may support a subset.
+
+	Anthropic also accepts ``xhigh`` and ``max`` levels but those are not part
+	of this enum because the addon UI only persists the four canonical values
+	(see ``model.Model.reasoning_effort_options``).
+	"""
+
 	MINIMAL = auto()
 	LOW = auto()
 	MEDIUM = auto()
@@ -123,20 +162,40 @@ class ReasoningEffort(StrEnum):
 REASONING_EFFORT_OPTIONS = tuple(e.value for e in ReasoningEffort)
 DEFAULT_REASONING_EFFORT = ReasoningEffort.MEDIUM.value
 
+
+class Role(StrEnum):
+	"""Standard chat message roles shared by every provider's chat API."""
+
+	SYSTEM = auto()
+	USER = auto()
+	ASSISTANT = auto()
+	TOOL = auto()
+	DEVELOPER = auto()
+
+
+class ContentType(StrEnum):
+	"""Standard ``content`` part types used in OpenAI-compatible messages."""
+
+	TEXT = auto()
+	IMAGE_URL = auto()
+	INPUT_AUDIO = auto()
+	INPUT_FILE = auto()
+
+
 AUDIO_EXT_TO_FORMAT = {".wav": "wav", ".mp3": "mp3", ".m4a": "m4a", ".webm": "webm", ".mp4": "mp4"}
 
 MIN_SAMPLES_FOR_TRIM = 0.1
 
 BASE_URLs = {
-	"MistralAI": "https://api.mistral.ai/v1",
-	"OpenAI": "https://api.openai.com/v1",
-	"DeepSeek": "https://api.deepseek.com/v1",
-	"CustomOpenAI": "https://api.openai.com/v1",
-	"Ollama": "http://127.0.0.1:11434/v1",
-	"OpenRouter": "https://openrouter.ai/api/v1",
-	"Anthropic": "https://api.anthropic.com/v1",
-	"xAI": "https://api.x.ai/v1",
-	"Google": "https://generativelanguage.googleapis.com/v1beta/openai",
+	Provider.MistralAI: "https://api.mistral.ai/v1",
+	Provider.OpenAI: "https://api.openai.com/v1",
+	Provider.DeepSeek: "https://api.deepseek.com/v1",
+	Provider.CustomOpenAI: "https://api.openai.com/v1",
+	Provider.Ollama: "http://127.0.0.1:11434/v1",
+	Provider.OpenRouter: "https://openrouter.ai/api/v1",
+	Provider.Anthropic: "https://api.anthropic.com/v1",
+	Provider.xAI: "https://api.x.ai/v1",
+	Provider.Google: "https://generativelanguage.googleapis.com/v1beta/openai",
 }
 DEFAULT_SYSTEM_PROMPT = _(
 	"You are an accessibility assistant integrated in the NVDA screen reader that "

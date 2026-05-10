@@ -12,6 +12,7 @@ from logHandler import log
 from .apiclient import APIConnectionError, APIStatusError, Transcription
 from .conversations import ConversationFormat
 from .consts import (
+	Provider,
 	SND_CHAT_RESPONSE_RECEIVED,
 	SND_PROGRESS,
 	stop_progress_sound,
@@ -44,7 +45,7 @@ class OpenAITranscriptionToolDialog(ToolDialogBase):
 		super().__init__(
 			parent,
 			title=_("Tool: OpenAI Transcription"),
-			provider="OpenAI",
+			provider=Provider.OpenAI,
 			size=(860, 880),
 			parentDialog=parentDialog,
 			plugin=plugin,

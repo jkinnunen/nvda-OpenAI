@@ -13,6 +13,8 @@ from logHandler import log
 
 from .conversations import ConversationFormat
 from .consts import (
+	Provider,
+	Role,
 	SND_CHAT_RESPONSE_RECEIVED,
 	SND_PROGRESS,
 	stop_progress_sound,
@@ -32,7 +34,7 @@ class Lyria3ProToolDialog(ToolDialogBase):
 		super().__init__(
 			parent,
 			title=_("Tool: Lyria 3 Pro"),
-			provider="Google",
+			provider=Provider.Google,
 			size=(760, 720),
 			parentDialog=parentDialog,
 			plugin=plugin,
@@ -167,7 +169,7 @@ class Lyria3ProToolDialog(ToolDialogBase):
 			user_prompt += "\n\nNegative prompt: " + negative_prompt
 		resp = self.client.chat.completions.create(
 			model=model,
-			messages=[{"role": "user", "content": user_prompt}],
+			messages=[{"role": Role.USER, "content": user_prompt}],
 			stream=False,
 			modalities=["audio"],
 			audio={"format": "wav"},
@@ -191,7 +193,7 @@ class Lyria3ProToolDialog(ToolDialogBase):
 		body = {
 			"contents": [
 				{
-					"role": "user",
+					"role": Role.USER,
 					"parts": [{"text": full_prompt}],
 				}
 			],

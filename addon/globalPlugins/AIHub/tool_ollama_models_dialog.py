@@ -11,6 +11,7 @@ import wx
 
 from .consts import (
 	BASE_URLs,
+	Provider,
 	SND_CHAT_RESPONSE_RECEIVED,
 	SND_PROGRESS,
 	stop_progress_sound,
@@ -41,7 +42,7 @@ class OllamaModelManagerToolDialog(ToolDialogBase):
 		super().__init__(
 			parent,
 			title=_("Tool: Ollama model manager"),
-			provider="Ollama",
+			provider=Provider.Ollama,
 			size=(860, 760),
 			parentDialog=parentDialog,
 			plugin=plugin,
@@ -130,7 +131,7 @@ class OllamaModelManagerToolDialog(ToolDialogBase):
 			ctrl.Enable(not busy)
 
 	def _native_base_url(self, account_id: str) -> str:
-		base = self.manager.get_base_url(account_id=account_id) or BASE_URLs.get("Ollama", "http://127.0.0.1:11434/v1")
+		base = self.manager.get_base_url(account_id=account_id) or BASE_URLs.get(Provider.Ollama, "http://127.0.0.1:11434/v1")
 		base = base.rstrip("/")
 		if base.lower().endswith("/v1"):
 			base = base[:-3]
@@ -253,7 +254,7 @@ class OllamaModelManagerToolDialog(ToolDialogBase):
 				parsed = raw
 			formatted = self._format_result(action, parsed)
 			if action in ("pull", "delete", "create", "copy"):
-				clearModelCache("Ollama")
+				clearModelCache(Provider.Ollama)
 		except urllib.error.HTTPError as e:
 			try:
 				body = e.read().decode("utf-8", errors="replace")

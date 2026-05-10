@@ -7,9 +7,11 @@ import wx
 
 from . import apikeymanager
 from .consts import (
+	Provider,
+	TranscriptionProvider,
+	TRANSCRIPTION_PROVIDERS,
 	TTS_MODELS,
 	TTS_VOICES,
-	TRANSCRIPTION_PROVIDERS,
 )
 
 addonHandler.initTranslation()
@@ -153,9 +155,9 @@ class AIHubSettingsPanel(gui.settingsDialogs.SettingsPanel):
 			wx.Choice,
 			choices=transcriptionChoices,
 		)
-		provider = conf["audio"].get("transcriptionProvider", "openai")
+		provider = conf["audio"].get("transcriptionProvider", TranscriptionProvider.OPENAI.value)
 		if conf["audio"]["whisper.cpp"]["enabled"]:
-			provider = "whisper_cpp"
+			provider = TranscriptionProvider.WHISPER_CPP.value
 		providerIndex = list(TRANSCRIPTION_PROVIDERS).index(provider) if provider in TRANSCRIPTION_PROVIDERS else 1
 		self.transcriptionProviderChoice.SetSelection(providerIndex)
 		self.transcriptionProviderChoice.Bind(wx.EVT_CHOICE, self.onTranscriptionProviderChange)
@@ -242,11 +244,11 @@ class AIHubSettingsPanel(gui.settingsDialogs.SettingsPanel):
 		audio_conf = conf.get("audio", {})
 		openai_id = audio_conf.get("openaiTranscriptionAccountId", "")
 		mistral_id = audio_conf.get("mistralTranscriptionAccountId", "")
-		labels, ids, selected_idx = self._buildTranscriptionAccountChoices("OpenAI", openai_id)
+		labels, ids, selected_idx = self._buildTranscriptionAccountChoices(Provider.OpenAI, openai_id)
 		self._openaiTranscriptionAccountIds = ids
 		self.openaiTranscriptionAccountChoice.SetItems(labels)
 		self.openaiTranscriptionAccountChoice.SetSelection(selected_idx)
-		labels, ids, selected_idx = self._buildTranscriptionAccountChoices("MistralAI", mistral_id)
+		labels, ids, selected_idx = self._buildTranscriptionAccountChoices(Provider.MistralAI, mistral_id)
 		self._mistralTranscriptionAccountIds = ids
 		self.mistralTranscriptionAccountChoice.SetItems(labels)
 		self.mistralTranscriptionAccountChoice.SetSelection(selected_idx)
@@ -302,7 +304,7 @@ class AIHubSettingsPanel(gui.settingsDialogs.SettingsPanel):
 		providerIndex = self.transcriptionProviderChoice.GetSelection()
 		provider = TRANSCRIPTION_PROVIDERS[providerIndex]
 		conf["audio"]["transcriptionProvider"] = provider
-		conf["audio"]["whisper.cpp"]["enabled"] = provider == "whisper_cpp"
+		conf["audio"]["whisper.cpp"]["enabled"] = provider == TranscriptionProvider.WHISPER_CPP
 		conf["audio"]["whisper.cpp"]["host"] = self.whisperHost.GetValue()
 		openai_idx = self.openaiTranscriptionAccountChoice.GetSelection()
 		mistral_idx = self.mistralTranscriptionAccountChoice.GetSelection()

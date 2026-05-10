@@ -9,18 +9,25 @@ addonHandler.initTranslation()
 
 
 def _normalize_reasoning_for_properties(raw: str) -> str:
-	"""Unwrap literal <think>...</think> segments stored on HistoryBlock.
+	"""Unwrap literal thinking markers stored on HistoryBlock reasoning text.
 
-	Providers (e.g. Anthropic summarized thinking) emit those tags inside the reasoning channel.
-	Message properties used to wrap the whole body in similar markers too, which duplicated them."""
+	Providers may emit ``<think>``, ``<thinking>``, or ``<thought>``
+	wrappers inside the reasoning channel (or legacy saves may still contain
+	them). Message properties used to wrap the whole body in similar markers
+	too, which duplicated them."""
 	t = (raw or "").strip()
 	if not t:
 		return ""
-	pat = re.compile(r"<think>\s*(.*?)\s*</think>", re.DOTALL | re.IGNORECASE)
+	patterns = (
+		re.compile(r"<think>\s*(.*?)\s*</think>", re.DOTALL | re.IGNORECASE),
+		re.compile(r"<thought>\s*(.*?)\s*</thought>", re.DOTALL | re.IGNORECASE),
+		re.compile(r"<thinking>\s*(.*?)\s*</thinking>", re.DOTALL | re.IGNORECASE),
+	)
 	prev = None
 	while prev != t:
 		prev = t
-		t = pat.sub(lambda m: (m.group(1) or "").strip(), t)
+		for pat in patterns:
+			t = pat.sub(lambda m: (m.group(1) or "").strip(), t)
 	t = re.sub(r"\n{3,}", "\n\n", t).strip()
 	return t
 
@@ -138,7 +145,7 @@ def build_message_properties_html(block, unknown_model_label):
 	model_name = getattr(block, "model", "") or unknown_model_label
 	prompt_chars = len(getattr(block, "prompt", "") or "")
 	response_chars = len(getattr(block, "responseText", "") or "")
-	path_list = getattr(block, "pathList", None) or []
+	files_list = getattr(block, "filesList", None) or []
 	audio_list = getattr(block, "audioPathList", None) or []
 	usage = getattr(block, "usage", {}) or {}
 	timing = getattr(block, "timing", {}) or {}
@@ -150,7 +157,7 @@ def build_message_properties_html(block, unknown_model_label):
 		_li(_("Model"), model_name),
 		_li(_("Prompt characters"), prompt_chars),
 		_li(_("Response characters"), response_chars),
-		_li(_("Images attached"), len(path_list)),
+		_li(_("Files attached"), len(files_list)),
 		_li(_("Audio files attached"), len(audio_list)),
 	]
 	if getattr(block, "maxTokens", 0):

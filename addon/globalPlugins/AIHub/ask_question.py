@@ -15,7 +15,14 @@ from logHandler import log
 
 from . import apikeymanager
 from .apiclient import configure_client_for_provider, truncate_error_for_user
-from .consts import AUDIO_EXT_TO_FORMAT, TEMP_DIR, TTS_DEFAULT_VOICE, ensure_temp_dir
+from .consts import (
+	AUDIO_EXT_TO_FORMAT,
+	ContentType,
+	Role,
+	TEMP_DIR,
+	TTS_DEFAULT_VOICE,
+	ensure_temp_dir,
+)
 from .model import getModels
 
 MCI_ALIAS_ASK = "ask_audio"
@@ -107,7 +114,7 @@ class AskQuestionThread(threading.Thread):
 			audio_format = AUDIO_EXT_TO_FORMAT.get(ext, "wav")
 			with open(self._audio_path, "rb") as audio_file:
 				data_b64 = base64.b64encode(audio_file.read()).decode("utf-8")
-			content = [{"type": "input_audio", "input_audio": {"data": data_b64, "format": audio_format}}]
+			content = [{"type": ContentType.INPUT_AUDIO, "input_audio": {"data": data_b64, "format": audio_format}}]
 		elif self._question:
 			content = self._question
 		if not content:
@@ -125,7 +132,7 @@ class AskQuestionThread(threading.Thread):
 		client = configure_client_for_provider(self._client, provider, clone=True)
 		params = {
 			"model": model_id,
-			"messages": [{"role": "user", "content": content}],
+			"messages": [{"role": Role.USER, "content": content}],
 			"stream": False,
 		}
 		if model_obj and getattr(model_obj, "audioOutput", False):

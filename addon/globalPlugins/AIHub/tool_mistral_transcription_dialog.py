@@ -15,6 +15,7 @@ from logHandler import log
 from .apiclient import APIConnectionError, APIStatusError, _resolve_error_message
 from .conversations import ConversationFormat
 from .consts import (
+	Provider,
 	SND_CHAT_RESPONSE_RECEIVED,
 	SND_PROGRESS,
 	stop_progress_sound,
@@ -58,7 +59,7 @@ class MistralSpeechToTextToolDialog(ToolDialogBase):
 		super().__init__(
 			parent,
 			title=_("Tool: Mistral Speech to Text"),
-			provider="MistralAI",
+			provider=Provider.MistralAI,
 			size=(860, 820),
 			parentDialog=parentDialog,
 			plugin=plugin,

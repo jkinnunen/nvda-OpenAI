@@ -259,7 +259,7 @@ class ToolDialogBase(wx.Dialog):
 		block.responseText = response_text or ""
 		block.model = model or ""
 		block.system = ""
-		block.pathList = list(image_paths or [])
+		block.filesList = list(image_paths or [])
 		block.audioPathList = list(audio_paths or [])
 		block.audioTranscriptList = []
 		conversations.save_conversation(

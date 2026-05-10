@@ -1,4 +1,13 @@
-"""Image file handling for the conversation window: ImageFile, types, display size."""
+"""Attachment file handling for the conversation window.
+
+Holds the ``AttachmentFile`` data class and ``AttachmentFileTypes`` constants
+used by the per-tab "Files" list (images and documents). Audio attachments
+are kept in a separate ``audioPathList`` and modeled as plain path strings.
+
+The module file is still named ``image_file.py`` for backward-compatibility
+with conversation JSON loaders and any cached imports — only the in-code
+identifiers were renamed.
+"""
 import os
 import re
 import mimetypes
@@ -20,7 +29,13 @@ def get_display_size(size):
 	return f"{size / 1024 / 1024:.2f} MB"
 
 
-class ImageFileTypes:
+class AttachmentFileTypes:
+	"""Type tag for ``AttachmentFile.type``.
+
+	Distinguishes images vs. non-image documents and local-file vs. remote
+	URL sources. Used to route attachments through the right provider request
+	shape (image_url vs. input_file vs. native PDF, etc.).
+	"""
 	UNKNOWN = 0
 	IMAGE_LOCAL = 1
 	IMAGE_URL = 2
@@ -28,7 +43,14 @@ class ImageFileTypes:
 	DOCUMENT_URL = 4
 
 
-class ImageFile:
+class AttachmentFile:
+	"""One entry in the per-tab "Files" attachment list.
+
+	Despite the class living in ``image_file.py``, this represents either an
+	image or a document (PDF, DOCX, TXT, …). The variant is recorded in
+	``self.type`` (an :class:`AttachmentFileTypes` constant).
+	"""
+
 	def __init__(
 		self,
 		path: str,
@@ -51,10 +73,10 @@ class ImageFile:
 
 	def _get_type(self):
 		if os.path.exists(self.path):
-			return ImageFileTypes.IMAGE_LOCAL if self._is_image_path(self.path) else ImageFileTypes.DOCUMENT_LOCAL
+			return AttachmentFileTypes.IMAGE_LOCAL if self._is_image_path(self.path) else AttachmentFileTypes.DOCUMENT_LOCAL
 		if re.match(URL_PATTERN, self.path):
-			return ImageFileTypes.IMAGE_URL if self._is_image_path(self.path) else ImageFileTypes.DOCUMENT_URL
-		return ImageFileTypes.UNKNOWN
+			return AttachmentFileTypes.IMAGE_URL if self._is_image_path(self.path) else AttachmentFileTypes.DOCUMENT_URL
+		return AttachmentFileTypes.UNKNOWN
 
 	def _is_image_path(self, value: str) -> bool:
 		parsed = urllib.parse.urlparse(value)
@@ -63,19 +85,19 @@ class ImageFile:
 		return bool(mime and mime.startswith("image/"))
 
 	def _get_name(self):
-		if self.type in (ImageFileTypes.IMAGE_LOCAL, ImageFileTypes.DOCUMENT_LOCAL):
+		if self.type in (AttachmentFileTypes.IMAGE_LOCAL, AttachmentFileTypes.DOCUMENT_LOCAL):
 			return os.path.basename(self.path)
-		if self.type in (ImageFileTypes.IMAGE_URL, ImageFileTypes.DOCUMENT_URL):
+		if self.type in (AttachmentFileTypes.IMAGE_URL, AttachmentFileTypes.DOCUMENT_URL):
 			return self.path.split("/")[-1]
 		return "N/A"
 
 	def _get_size(self):
-		if self.type == ImageFileTypes.IMAGE_LOCAL:
+		if self.type == AttachmentFileTypes.IMAGE_LOCAL:
 			return get_display_size(os.path.getsize(self.path))
 		return "N/A"
 
 	def _get_dimensions(self):
-		if self.type == ImageFileTypes.IMAGE_LOCAL:
+		if self.type == AttachmentFileTypes.IMAGE_LOCAL:
 			try:
 				return get_image_dimensions(self.path)
 			except Exception:

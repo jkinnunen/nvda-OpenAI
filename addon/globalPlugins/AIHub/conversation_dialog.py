@@ -28,14 +28,17 @@ from . import conversations
 from .audiohandlers import AudioHandlersMixin
 from .chatcompletion import CompletionThread
 from .historyhandlers import HistoryHandlersMixin
-from .imagehandlers import ImageHandlersMixin
+from .filehandlers import FileHandlersMixin
 from .modelhandlers_core import ModelHandlersMixin
 from .consts import (
 	ADDON_DIR, ADDON_LIBS_DIR, DATA_DIR, LIBS_BASE, TEMP_DIR, cleanup_temp_dir, stop_progress_sound,
 	ensure_temp_dir,
+	ContentType,
+	Provider,
+	Role,
+	TranscriptionProvider,
 	TOP_P_MIN, TOP_P_MAX,
 	DEFAULT_SYSTEM_PROMPT,
-	TTS_VOICES, TTS_DEFAULT_VOICE,
 	AUDIO_EXT_TO_FORMAT,
 	SND_CHAT_RESPONSE_RECEIVED, SND_PROGRESS,
 	REASONING_EFFORT_OPTIONS, DEFAULT_REASONING_EFFORT,
@@ -44,7 +47,7 @@ from .consts import (
 )
 from .history import HistoryBlock, TextSegment
 from .imagehelper import encode_image, get_image_dimensions, resize_image
-from .image_file import ImageFile, ImageFileTypes, get_display_size, URL_PATTERN
+from .image_file import AttachmentFile, AttachmentFileTypes, get_display_size, URL_PATTERN
 from .recordthread import RecordThread, WhisperTranscription, AudioInputResult
 from .resultevent import ResultEvent, EVT_RESULT_ID
 from .transcription import get_transcription_provider
@@ -106,7 +109,7 @@ class ConversationNotebook(wx.Notebook):
 	"""Notebook hosting parallel conversation sessions."""
 
 
-class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandlersMixin, AudioHandlersMixin, HistoryHandlersMixin, wx.Dialog):
+class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, FileHandlersMixin, AudioHandlersMixin, HistoryHandlersMixin, wx.Dialog):
 	"""NVDA AI-Hub conversation window (parallel sessions in a notebook)."""
 	_THINK_HISTORY_OPEN = "<think>\n"
 	_THINK_HISTORY_CLOSE = "\n</think>\n"
@@ -247,7 +250,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		blocks = self._collect_blocks_from_page(page)
 		draft_prompt = page.promptTextCtrl.GetValue()
 		draft_stripped = draft_prompt.strip()
-		has_attachments = bool(page.pathList or page.audioPathList)
+		has_attachments = bool(page.filesList or page.audioPathList)
 		has_content = bool(blocks) or bool(draft_stripped) or has_attachments
 		if not for_hub_session:
 			if not has_content:
@@ -273,7 +276,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 			"name": name,
 			"conv_id": page._conversationId,
 			"draftPrompt": draft_prompt,
-			"draftPathList": page.pathList,
+			"draftPathList": page.filesList,
 			"draftAudioPathList": page.audioPathList,
 			"account_key": account_key,
 			"ui_state": ui_state,
@@ -454,6 +457,72 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		pos = _("({cur}/{tot})").format(cur=idx + 1, tot=n)
 		self.SetTitle(f"{label} {pos} – {_('Conversation')}")
 
+	def _deriveTabTitleFromAttachments(self, files) -> str:
+		"""Derive a notebook-tab label from the first attachment in the active tab.
+
+		Reuses the user-visible name shown in the Files list (e.g.
+		``"Screenshot 12:34:56"`` for NVDA+E, ``"<obj name> (Navigator Object …)"``
+		for NVDA+O, or just the file basename for picker/drag-drop). If there
+		are several attachments, the extra count is appended.
+		"""
+		if not files:
+			return ""
+		primary = (getattr(files[0], "name", "") or "").strip()
+		if not primary:
+			try:
+				primary = os.path.basename(getattr(files[0], "path", "") or "").strip()
+			except Exception:
+				primary = ""
+		if not primary:
+			return ""
+		if len(primary) > 50:
+			primary = primary[:47].rstrip() + "…"
+		extra = len(files) - 1
+		if extra > 0:
+			return _("{base} (+{n})").format(base=primary, n=extra)
+		return primary
+
+	def _retitleEmptyTabFromAttachments(self):
+		"""Rename the active tab from its placeholder label to the first attachment's name.
+
+		Only fires when the tab is brand-new (no saved conversation id, no
+		message history, label is the default placeholder). Anything the user
+		has explicitly renamed is left alone, and a tab that already has a
+		conversation/messages keeps its existing title.
+		"""
+		page = self.get_active_page()
+		if not page:
+			return
+		if getattr(page, "_conversationId", None):
+			return
+		if getattr(page, "firstBlock", None):
+			return
+		files = getattr(page, "filesList", None) or []
+		if not files:
+			return
+		title = self._deriveTabTitleFromAttachments(files)
+		if not title:
+			return
+		idx = self._notebook_page_index(page)
+		if idx < 0:
+			return
+		current = (self.notebook.GetPageText(idx) or "").strip()
+		# Untranslated defaults are listed too because users may run the addon
+		# in a locale other than the one in which the tab was first created.
+		placeholders = {
+			_("Untitled conversation"),
+			_("Conversation"),
+			_("New conversation"),
+			"Untitled conversation",
+			"Conversation",
+			"New conversation",
+		}
+		if current and current not in placeholders:
+			return
+		self.notebook.SetPageText(idx, title)
+		if self.notebook.GetSelection() == idx:
+			self._syncWindowTitleFromActiveTab()
+
 	def get_active_page(self):
 		idx = self.notebook.GetSelection()
 		if idx < 0:
@@ -522,12 +591,12 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		return self.get_active_page()
 
 	@property
-	def imagesLabel(self):
-		return self._attachment_scope().imagesLabel
+	def filesLabel(self):
+		return self._attachment_scope().filesLabel
 
 	@property
-	def imagesListCtrl(self):
-		return self._attachment_scope().imagesListCtrl
+	def filesListCtrl(self):
+		return self._attachment_scope().filesListCtrl
 
 	@property
 	def audioLabel(self):
@@ -554,12 +623,12 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		self._conversation_scope().lastBlock = value
 
 	@property
-	def pathList(self):
-		return self._attachment_scope().pathList
+	def filesList(self):
+		return self._attachment_scope().filesList
 
-	@pathList.setter
-	def pathList(self, value):
-		self._attachment_scope().pathList = value
+	@filesList.setter
+	def filesList(self, value):
+		self._attachment_scope().filesList = value
 
 	@property
 	def audioPathList(self):
@@ -683,7 +752,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		page.conversationSystemText = ""
 		page.conversationUiState = {}
 		self._clearMessagesSegmentsOnPage(page)
-		page.pathList = []
+		page.filesList = []
 		page.audioPathList = []
 		page.promptTextCtrl.Clear()
 		idx = self._notebook_page_index(page)
@@ -716,14 +785,14 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		page.conversationSystemText = ""
 		page.conversationUiState = {}
 		self._clearMessagesSegmentsOnPage(page)
-		page.pathList = []
+		page.filesList = []
 		page.audioPathList = []
 		page.promptTextCtrl.Clear()
 		idx = self._notebook_page_index(page)
 		if idx >= 0 and select_tab:
 			self.notebook.SetSelection(idx)
 		if sync_attachment_widgets:
-			self.updateImageList(focusPrompt=False)
+			self.updateFilesList(focusPrompt=False)
 			self.updateAudioList(focusPrompt=False)
 
 	def _saveHubSession(self):
@@ -837,7 +906,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		if n:
 			self.notebook.SetSelection(min(new_sel, n - 1))
 		self._cached_messages_hwnd = None
-		self.updateImageList(False)
+		self.updateFilesList(False)
 		self.updateAudioList(False)
 		self._syncWindowTitleFromActiveTab()
 		return True
@@ -891,7 +960,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		client,
 		conf,
 		title=None,
-		pathList=None,
+		filesList=None,
 		plugin=None,
 		conversationData=None,
 	):
@@ -909,7 +978,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		self._showThinkingInHistory = bool(self.data.get("showThinkingInHistory", True))
 		self._models = []
 		self._worker_page = None
-		self._pending_session_paths = list(pathList) if pathList else []
+		self._pending_session_paths = list(filesList) if filesList else []
 		self._fileToRemoveAfter = []
 		self.lastFocusedItem = None
 		self.historyObj = None
@@ -980,18 +1049,35 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self._onNotebookPageChanging)
 		self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self._onNotebookPageChanged)
 		self._addConversationTab()
+		# When the dialog is opened with a pending attachment (e.g. NVDA+E /
+		# NVDA+O screenshot, file-picker, drag-and-drop) we still want to
+		# restore the previously saved tabs first, then drop the attachment in
+		# a brand new active tab so the user does not lose their last session.
+		# ``_restoreHubSessionIfNeeded`` already appends a fresh tab and selects
+		# it, so afterwards the active page is the right destination.
+		self._hub_session_restored = False
+		if self._pending_session_paths and not conversationData:
+			try:
+				self._restoreHubSessionIfNeeded()
+				self._hub_session_restored = True
+			except Exception:
+				log.error("restore hub session before pending attachment", exc_info=True)
 		if self._pending_session_paths:
 			addToSession = self
 			for path in self._pending_session_paths:
-				self.addImageToList(path, removeAfter=True)
+				self.addFileToList(path, removeAfter=True)
 			self._pending_session_paths = []
 		p0 = self.get_active_page()
-		if p0.pathList:
+		if p0.filesList:
 			p0.promptTextCtrl.SetValue(
-				self.getDefaultImageDescriptionsPrompt()
+				self.getDefaultFilesDescriptionPrompt()
 			)
-		self.updateImageList()
+		self.updateFilesList()
 		self.updateAudioList()
+		# Rename the freshly-created tab from "Untitled conversation" to the
+		# attachment's display name (e.g. "Screenshot 12:34:56") so screenshots
+		# and Navigator-Object captures are easy to identify in the notebook.
+		self._retitleEmptyTabFromAttachments()
 
 		if conf["saveSystem"]:
 			self.get_active_page().systemTextCtrl.SetValue(self._lastSystem)
@@ -1190,7 +1276,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		self.Bind(wx.EVT_CLOSE, self.onCancel)
 		if conversationData:
 			self._loadConversation(conversationData, focus_message_history=True)
-		elif not self._pending_session_paths:
+		elif not self._hub_session_restored:
 			self._restoreHubSessionIfNeeded()
 		self._syncWindowTitleFromActiveTab()
 		wx.CallAfter(self._syncSharedChromeForActiveTab)
@@ -1379,7 +1465,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 			self.promptTextCtrl.SetValue(draft_prompt)
 			self.promptTextCtrl.SetInsertionPointEnd()
 		draft_path_list = data.get("draftPathList", [])
-		self.pathList = []
+		self.filesList = []
 		if isinstance(draft_path_list, list):
 			for item in draft_path_list:
 				if isinstance(item, dict):
@@ -1387,12 +1473,12 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 					name = item.get("name", "")
 					if path:
 						try:
-							self.pathList.append(ImageFile(path, name=name or None))
+							self.filesList.append(AttachmentFile(path, name=name or None))
 						except Exception as err:
 							log.warning(f"load draft image skipped {path}: {err}")
 				elif isinstance(item, str) and item:
 					try:
-						self.pathList.append(ImageFile(item))
+						self.filesList.append(AttachmentFile(item))
 					except Exception as err:
 						log.warning(f"load draft image skipped {item}: {err}")
 		draft_audio_list = data.get("draftAudioPathList", [])
@@ -1401,7 +1487,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 			for item in draft_audio_list:
 				if isinstance(item, str) and item:
 					self.audioPathList.append(item)
-		self.updateImageList(focusPrompt=False)
+		self.updateFilesList(focusPrompt=False)
 		self.updateAudioList(focusPrompt=False)
 		conv_id = data.get("id")
 		if conv_id:
@@ -1529,7 +1615,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 			)
 
 	def _onSubmitImpl(self, evt):
-		if not getattr(self, "_askPromptOverride", None) and not self.promptTextCtrl.GetValue().strip() and not self.pathList and not self.audioPathList:
+		if not getattr(self, "_askPromptOverride", None) and not self.promptTextCtrl.GetValue().strip() and not self.filesList and not self.audioPathList:
 			self.promptTextCtrl.SetFocus()
 			return
 		if self.worker:
@@ -1568,7 +1654,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 			)
 			return
 
-		ok, validation_message = self.validateAttachmentsForProvider(provider=model.provider, pathList=self.pathList)
+		ok, validation_message = self.validateAttachmentsForProvider(provider=model.provider, filesList=self.filesList)
 		if not ok:
 			gui.messageBox(
 				validation_message,
@@ -1577,7 +1663,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 			)
 			return
 
-		if not model.vision and self.pathList:
+		if not model.vision and self.filesList:
 			visionModels = [m.id for m in self._models if m.vision]
 			gui.messageBox(
 				_(
@@ -1964,36 +2050,37 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		self.addEntry(accelEntries, wx.ACCEL_CTRL, ord("S"), self._saveConversation)
 		self.addEntry(accelEntries, wx.ACCEL_CTRL, ord("L"), self._onConversationList)
 		self.addEntry(accelEntries, wx.ACCEL_CTRL, ord("r"), self.onRecord)
-		self.addEntry(accelEntries, wx.ACCEL_CTRL, ord("i"), self.onImageDescriptionFromFilePath)
-		self.addEntry(accelEntries, wx.ACCEL_CTRL, ord("u"), self.onImageDescriptionFromURL)
-		self.addEntry(accelEntries, wx.ACCEL_CTRL, ord("e"), self.onImageDescriptionFromScreenshot)
+		self.addEntry(accelEntries, wx.ACCEL_CTRL, ord("i"), self.onFileDescriptionFromFilePath)
+		self.addEntry(accelEntries, wx.ACCEL_CTRL, ord("u"), self.onFileDescriptionFromURL)
+		self.addEntry(accelEntries, wx.ACCEL_CTRL, ord("e"), self.onFileDescriptionFromScreenshot)
 		self.addEntry(accelEntries, wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("T"), self.onProviderTools)
 		self.addEntry(accelEntries, wx.ACCEL_CTRL, ord("W"), self._onCloseConversationTab)
 		accelTable = wx.AcceleratorTable(accelEntries)
 		self.SetAcceleratorTable(accelTable)
 
-	def getImages(
+	def getFilesContent(
 		self,
-		pathList: list = None,
+		filesList: list = None,
 		prompt: str = None
 	) -> list:
+		"""Build OpenAI-style content parts (image_url / input_file) for the given attachments."""
 		conf = self.conf
-		if not pathList:
-			pathList = self.pathList
-		images = []
+		if not filesList:
+			filesList = self.filesList
+		parts = []
 		if prompt:
-			images.append({
-				"type": "text",
+			parts.append({
+				"type": ContentType.TEXT,
 				"text": prompt
 			})
-		for imageFile in pathList:
-			path = imageFile.path
+		for attachment in filesList:
+			path = attachment.path
 			log.debug(f"Processing {path}")
-			if imageFile.type == ImageFileTypes.IMAGE_URL:
-				images.append({"type": "image_url", "image_url": {"url": path}})
-			elif imageFile.type == ImageFileTypes.DOCUMENT_URL:
-				images.append({"type": "input_file", "file_url": path, "filename": imageFile.name})
-			elif imageFile.type == ImageFileTypes.IMAGE_LOCAL:
+			if attachment.type == AttachmentFileTypes.IMAGE_URL:
+				parts.append({"type": ContentType.IMAGE_URL, "image_url": {"url": path}})
+			elif attachment.type == AttachmentFileTypes.DOCUMENT_URL:
+				parts.append({"type": ContentType.INPUT_FILE, "file_url": path, "filename": attachment.name})
+			elif attachment.type == AttachmentFileTypes.IMAGE_LOCAL:
 				if conf["images"]["resize"]:
 					ensure_temp_dir()
 					fd, path_resized_image = tempfile.mkstemp(suffix=".jpg", dir=TEMP_DIR)
@@ -2008,31 +2095,31 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 						path = path_resized_image
 				base64_image = encode_image(path)
 				mime_type, _ = mimetypes.guess_type(path)
-				images.append({
-					"type": "image_url",
+				parts.append({
+					"type": ContentType.IMAGE_URL,
 					"image_url": {
 						"url": f"data:{mime_type};base64,{base64_image}"
 					}
 				})
-			elif imageFile.type == ImageFileTypes.DOCUMENT_LOCAL:
-				images.append({
-					"type": "input_file",
+			elif attachment.type == AttachmentFileTypes.DOCUMENT_LOCAL:
+				parts.append({
+					"type": ContentType.INPUT_FILE,
 					"file_path": path,
-					"filename": imageFile.name,
+					"filename": attachment.name,
 				})
 			else:
-				raise ValueError(f"Invalid image type for {path}")
-		return images
+				raise ValueError(f"Invalid attachment type for {path}")
+		return parts
 
-	def getAudioContent(self, pathList=None, prompt=None):
+	def getAudioContent(self, audioPaths=None, prompt=None):
 		"""Build input_audio content for audio-capable models."""
-		pathList = pathList or self.audioPathList
-		if not pathList:
+		audioPaths = audioPaths or self.audioPathList
+		if not audioPaths:
 			return []
 		content = []
 		if prompt:
-			content.append({"type": "text", "text": prompt})
-		for path in pathList:
+			content.append({"type": ContentType.TEXT, "text": prompt})
+		for path in audioPaths:
 			path_str = path if isinstance(path, str) else getattr(path, "path", str(path))
 			if not os.path.exists(path_str):
 				continue
@@ -2041,7 +2128,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 			with open(path_str, "rb") as f:
 				data_b64 = base64.b64encode(f.read()).decode("utf-8")
 			content.append({
-				"type": "input_audio",
+				"type": ContentType.INPUT_AUDIO,
 				"input_audio": {"data": data_b64, "format": fmt}
 			})
 		return content
@@ -2053,29 +2140,29 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		block = self.firstBlock
 		while block:
 			userContent = []
-			if block.pathList or getattr(block, "audioPathList", None):
+			if block.filesList or getattr(block, "audioPathList", None):
 				if block.prompt:
-					userContent.append({"type": "text", "text": block.prompt})
-				if block.pathList:
-					userContent.extend(self.getImages(block.pathList, prompt=None))
+					userContent.append({"type": ContentType.TEXT, "text": block.prompt})
+				if block.filesList:
+					userContent.extend(self.getFilesContent(block.filesList, prompt=None))
 				if getattr(block, "audioPathList", None):
 					tlist = getattr(block, "audioTranscriptList", None)
 					if tlist is not None and len(tlist) == len(block.audioPathList) and any(t for t in tlist):
 						for t in tlist:
 							if t:
-								userContent.append({"type": "text", "text": t})
+								userContent.append({"type": ContentType.TEXT, "text": t})
 					else:
 						userContent.extend(self.getAudioContent(block.audioPathList, prompt=None))
 			elif block.prompt:
 				userContent = block.prompt
 			if userContent:
 				messages.append({
-					"role": "user",
+					"role": Role.USER,
 					"content": userContent
 				})
 			if block.responseText:
 				messages.append({
-					"role": "assistant",
+					"role": Role.ASSISTANT,
 					"content": block.responseText
 				})
 			block = block.next
@@ -2227,26 +2314,26 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		transcription_account_id = None
 		transcription_model = None
 		if not use_direct:
-			if transcription_provider == "openai":
+			if transcription_provider == TranscriptionProvider.OPENAI:
 				transcription_account_id = self.conf["audio"].get("openaiTranscriptionAccountId", "").strip()
-				if not transcription_account_id and account and account.get("provider") == "OpenAI":
+				if not transcription_account_id and account and account.get("provider") == Provider.OpenAI:
 					transcription_account_id = account.get("id")
 				model_id = getattr(model, "id", "")
 				if (
 					model
-					and getattr(model, "provider", "") == "OpenAI"
+					and getattr(model, "provider", "") == Provider.OpenAI
 					and isinstance(model_id, str)
 					and (model_id == "whisper-1" or "transcribe" in model_id.lower())
 				):
 					transcription_model = model_id
-			elif transcription_provider == "mistral":
+			elif transcription_provider == TranscriptionProvider.MISTRAL:
 				transcription_account_id = self.conf["audio"].get("mistralTranscriptionAccountId", "").strip()
-				if not transcription_account_id and account and account.get("provider") == "MistralAI":
+				if not transcription_account_id and account and account.get("provider") == Provider.MistralAI:
 					transcription_account_id = account.get("id")
 				model_id = getattr(model, "id", "")
 				if (
 					model
-					and getattr(model, "provider", "") == "MistralAI"
+					and getattr(model, "provider", "") == Provider.MistralAI
 					and isinstance(model_id, str)
 					and ("voxtral" in model_id.lower() or "transcribe" in model_id.lower())
 				):
@@ -2314,7 +2401,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 		page.systemTextCtrl.SetEditable(False)
 		page.accountListCtrl.Disable()
 		page.modelsListCtrl.Disable()
-		page.imagesListCtrl.Disable()
+		page.filesListCtrl.Disable()
 		page.audioListCtrl.Disable()
 		try:
 			self.advancedSamplingCheckBox.Disable()
@@ -2372,7 +2459,7 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 				p.promptTextCtrl.SetEditable(True)
 				p.accountListCtrl.Enable()
 				p.modelsListCtrl.Enable()
-				p.imagesListCtrl.Enable()
+				p.filesListCtrl.Enable()
 				p.audioListCtrl.Enable()
 		try:
 			self.advancedSamplingCheckBox.Enable()
@@ -2398,4 +2485,4 @@ class ConversationDialog(ModelHandlersMixin, AttachmentListUIMixin, ImageHandler
 						_w.Enable()
 					except Exception:
 						pass
-		self.updateImageList(False)
+		self.updateFilesList(False)

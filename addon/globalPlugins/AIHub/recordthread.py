@@ -30,7 +30,15 @@ from .apiclient import (
 	truncate_error_for_user,
 )
 from .audioutils import trim_silence_wav, downsample_to_voice_wav
-from .consts import ADDON_DIR, DATA_DIR, TEMP_DIR, ensure_temp_dir, stop_progress_sound
+from .consts import (
+	ADDON_DIR,
+	DATA_DIR,
+	Provider,
+	TEMP_DIR,
+	TranscriptionProvider,
+	ensure_temp_dir,
+	stop_progress_sound,
+)
 from .transcription import get_transcription_provider, get_transcription_text
 from .resultevent import ResultEvent
 
@@ -48,16 +56,16 @@ def transcribe_audio_file(path, conf, client=None):
 	if not path or not os.path.exists(path) or not path.lower().endswith((".wav", ".mp3", ".m4a", ".webm", ".mp4")):
 		return None
 	provider = get_transcription_provider(conf)
-	if provider == "whisper_cpp":
+	if provider == TranscriptionProvider.WHISPER_CPP:
 		rt = RecordThread(client or object(), conf=conf)
 		result = rt._transcribe_whisper_cpp(path)
-	elif provider == "mistral":
+	elif provider == TranscriptionProvider.MISTRAL:
 		rt = RecordThread(client or object(), conf=conf)
 		result = rt._transcribe_mistral(path)
 	else:
 		if not client:
 			return None
-		client = configure_client_for_provider(client, "OpenAI", clone=True)
+		client = configure_client_for_provider(client, Provider.OpenAI, clone=True)
 		rt = RecordThread(client, conf=conf)
 		result = rt._transcribe_openai(path)
 	if result is None:
@@ -100,7 +108,7 @@ class RecordThread(threading.Thread):
 		self,
 		client,
 		notifyWindow=None,
-		pathList=None,
+		audioFile=None,
 		conf=None,
 		responseFormat="json",
 		useDirectAudio=False,
@@ -112,7 +120,9 @@ class RecordThread(threading.Thread):
 	):
 		super(RecordThread, self).__init__(daemon=True)
 		self.client = client
-		self.pathList = pathList
+		# Optional pre-recorded audio file to transcribe instead of capturing live.
+		# Accepts a path string or a single-element list (legacy callers).
+		self.audioFile = audioFile
 		self.conf = conf
 		self.responseFormat = responseFormat
 		self.useDirectAudio = useDirectAudio
@@ -125,28 +135,28 @@ class RecordThread(threading.Thread):
 		self._transcriptionProvider = transcriptionProvider or get_transcription_provider(conf or {})
 		self._transcriptionAccountId = transcriptionAccountId
 		self._transcriptionModel = transcriptionModel
-		if self._transcriptionProvider == "openai":
+		if self._transcriptionProvider == TranscriptionProvider.OPENAI:
 			if not self._transcriptionAccountId:
 				self._transcriptionAccountId = (conf or {}).get("openaiTranscriptionAccountId", "")
-			if self._transcriptionAccountId and not apikeymanager.get("OpenAI").isReady(account_id=self._transcriptionAccountId):
+			if self._transcriptionAccountId and not apikeymanager.get(Provider.OpenAI).isReady(account_id=self._transcriptionAccountId):
 				self._transcriptionAccountId = ""
 			if not self._transcriptionAccountId:
-				self._transcriptionAccountId = apikeymanager.get("OpenAI").get_active_account_id()
+				self._transcriptionAccountId = apikeymanager.get(Provider.OpenAI).get_active_account_id()
 			if not self._transcriptionModel:
 				self._transcriptionModel = (conf or {}).get("whisperModel", "whisper-1")
-		elif self._transcriptionProvider == "mistral":
+		elif self._transcriptionProvider == TranscriptionProvider.MISTRAL:
 			if not self._transcriptionAccountId:
 				self._transcriptionAccountId = (conf or {}).get("mistralTranscriptionAccountId", "")
-			if self._transcriptionAccountId and not apikeymanager.get("MistralAI").isReady(account_id=self._transcriptionAccountId):
+			if self._transcriptionAccountId and not apikeymanager.get(Provider.MistralAI).isReady(account_id=self._transcriptionAccountId):
 				self._transcriptionAccountId = ""
 			if not self._transcriptionAccountId:
-				self._transcriptionAccountId = apikeymanager.get("MistralAI").get_active_account_id()
+				self._transcriptionAccountId = apikeymanager.get(Provider.MistralAI).get_active_account_id()
 			if not self._transcriptionModel:
 				self._transcriptionModel = (conf or {}).get("voxtralModel", "voxtral-mini-latest")
 
 	def run(self):
-		if self.pathList:
-			path = self.pathList[0] if isinstance(self.pathList, (list, tuple)) else self.pathList
+		if self.audioFile:
+			path = self.audioFile[0] if isinstance(self.audioFile, (list, tuple)) else self.audioFile
 			if (
 				self.conf.get("trimSilence", True)
 				and path
@@ -384,7 +394,7 @@ class RecordThread(threading.Thread):
 
 	def _transcribe_mistral(self, filename):
 		"""Transcribe via Mistral Voxtral API."""
-		manager = apikeymanager.get("MistralAI")
+		manager = apikeymanager.get(Provider.MistralAI)
 		api_key = manager.get_api_key(account_id=self._transcriptionAccountId)
 		if not api_key or not api_key.strip():
 			raise ValueError(_("No Mistral API key configured. Please add one in AI-Hub settings."))
@@ -397,7 +407,7 @@ class RecordThread(threading.Thread):
 			raise ValueError(_("OpenAI client is not available for transcription."))
 		client = configure_client_for_provider(
 			self.client,
-			"OpenAI",
+			Provider.OpenAI,
 			account_id=self._transcriptionAccountId,
 			clone=True,
 		)
@@ -415,9 +425,9 @@ class RecordThread(threading.Thread):
 		provider = self._get_transcription_provider()
 		try:
 			transcription = None
-			if provider == "whisper_cpp":
+			if provider == TranscriptionProvider.WHISPER_CPP:
 				transcription = self._transcribe_whisper_cpp(filename)
-			elif provider == "mistral":
+			elif provider == TranscriptionProvider.MISTRAL:
 				transcription = self._transcribe_mistral(filename)
 			else:
 				transcription = self._transcribe_openai(filename)

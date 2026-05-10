@@ -19,7 +19,10 @@ class ConversationSessionPanel(wx.Panel):
 		self.stopRequest = None
 		self.firstBlock = None
 		self.lastBlock = None
-		self.pathList = []
+		# Per-tab "Files" attachment list (images + documents). The on-disk JSON
+		# key is still ``pathList`` for backward compatibility, but the in-code
+		# attribute uses the neutral ``filesList`` name.
+		self.filesList = []
 		self.audioPathList = []
 		self._conversationId = None
 		self._historyPath = None
@@ -73,43 +76,37 @@ class ConversationSessionPanel(wx.Panel):
 		self.promptTextCtrl.Bind(wx.EVT_KEY_DOWN, host.onPromptKeyDown)
 		self.promptTextCtrl.Bind(wx.EVT_TEXT_PASTE, host.onPromptPasteSmart)
 
-		self.modelsLabel = wx.StaticText(self, label=_("M&odel:"))
-		self.modelsListCtrl = wx.ListBox(self, size=(700, 200))
-		self.modelsListCtrl.Bind(wx.EVT_LISTBOX, host.onModelChange)
-		self.modelsListCtrl.Bind(wx.EVT_KEY_DOWN, host.onModelKeyDown)
-		self.modelsListCtrl.Bind(wx.EVT_CONTEXT_MENU, host.onModelContextMenu)
-		self.modelsListCtrl.Bind(wx.EVT_RIGHT_UP, host.onModelContextMenu)
-		root.Add(self.modelsLabel, 0, wx.LEFT | wx.RIGHT | wx.TOP, UI_SECTION_SPACING_PX)
-		root.Add(self.modelsListCtrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_SECTION_SPACING_PX)
-
+		# Attachments come right after the prompt (the things you've just typed
+		# or pasted/dropped) and before the model picker, since they directly
+		# affect which models are usable for the next submit.
 		att_sz = wx.BoxSizer(wx.VERTICAL)
 		self.attachmentsSectionLabel = wx.StaticText(self, label=_("Attachments"))
 		att_sz.Add(self.attachmentsSectionLabel, 0, wx.LEFT | wx.RIGHT | wx.TOP, UI_SECTION_SPACING_PX)
-		self.imagesLabel = wx.StaticText(
+		self.filesLabel = wx.StaticText(
 			self,
 			label=_("&Files:"),
 		)
-		self.imagesListCtrl = wx.ListCtrl(
+		self.filesListCtrl = wx.ListCtrl(
 			self,
 			style=wx.LC_REPORT | wx.LC_HRULES | wx.LC_VRULES,
 			size=(700, 200),
 		)
-		self.imagesListCtrl.InsertColumn(0, _("name"))
-		self.imagesListCtrl.InsertColumn(1, _("path"))
-		self.imagesListCtrl.InsertColumn(2, _("size"))
-		self.imagesListCtrl.InsertColumn(3, _("Dimensions"))
-		self.imagesListCtrl.InsertColumn(4, _("description"))
-		self.imagesListCtrl.SetColumnWidth(0, 100)
-		self.imagesListCtrl.SetColumnWidth(1, 200)
-		self.imagesListCtrl.SetColumnWidth(2, 100)
-		self.imagesListCtrl.SetColumnWidth(3, 100)
-		self.imagesListCtrl.SetColumnWidth(4, 200)
-		att_sz.Add(self.imagesLabel, 0, wx.LEFT | wx.RIGHT | wx.TOP, UI_SECTION_SPACING_PX)
-		att_sz.Add(self.imagesListCtrl, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_SECTION_SPACING_PX)
-		self.imagesListCtrl.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, host.onImageListContextMenu)
-		self.imagesListCtrl.Bind(wx.EVT_KEY_DOWN, host.onImageListKeyDown)
-		self.imagesListCtrl.Bind(wx.EVT_CONTEXT_MENU, host.onImageListContextMenu)
-		self.imagesListCtrl.Bind(wx.EVT_RIGHT_UP, host.onImageListContextMenu)
+		self.filesListCtrl.InsertColumn(0, _("name"))
+		self.filesListCtrl.InsertColumn(1, _("path"))
+		self.filesListCtrl.InsertColumn(2, _("size"))
+		self.filesListCtrl.InsertColumn(3, _("Dimensions"))
+		self.filesListCtrl.InsertColumn(4, _("description"))
+		self.filesListCtrl.SetColumnWidth(0, 100)
+		self.filesListCtrl.SetColumnWidth(1, 200)
+		self.filesListCtrl.SetColumnWidth(2, 100)
+		self.filesListCtrl.SetColumnWidth(3, 100)
+		self.filesListCtrl.SetColumnWidth(4, 200)
+		att_sz.Add(self.filesLabel, 0, wx.LEFT | wx.RIGHT | wx.TOP, UI_SECTION_SPACING_PX)
+		att_sz.Add(self.filesListCtrl, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_SECTION_SPACING_PX)
+		self.filesListCtrl.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, host.onFilesListContextMenu)
+		self.filesListCtrl.Bind(wx.EVT_KEY_DOWN, host.onFilesListKeyDown)
+		self.filesListCtrl.Bind(wx.EVT_CONTEXT_MENU, host.onFilesListContextMenu)
+		self.filesListCtrl.Bind(wx.EVT_RIGHT_UP, host.onFilesListContextMenu)
 
 		self.audioLabel = wx.StaticText(
 			self,
@@ -131,11 +128,20 @@ class ConversationSessionPanel(wx.Panel):
 		self.audioListCtrl.Bind(wx.EVT_KEY_DOWN, host.onAudioListKeyDown)
 
 		self.attachmentsSectionLabel.Hide()
-		self.imagesLabel.Hide()
-		self.imagesListCtrl.Hide()
+		self.filesLabel.Hide()
+		self.filesListCtrl.Hide()
 		self.audioLabel.Hide()
 		self.audioListCtrl.Hide()
 
 		root.Add(att_sz, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_SECTION_SPACING_PX)
+
+		self.modelsLabel = wx.StaticText(self, label=_("M&odel:"))
+		self.modelsListCtrl = wx.ListBox(self, size=(700, 200))
+		self.modelsListCtrl.Bind(wx.EVT_LISTBOX, host.onModelChange)
+		self.modelsListCtrl.Bind(wx.EVT_KEY_DOWN, host.onModelKeyDown)
+		self.modelsListCtrl.Bind(wx.EVT_CONTEXT_MENU, host.onModelContextMenu)
+		self.modelsListCtrl.Bind(wx.EVT_RIGHT_UP, host.onModelContextMenu)
+		root.Add(self.modelsLabel, 0, wx.LEFT | wx.RIGHT | wx.TOP, UI_SECTION_SPACING_PX)
+		root.Add(self.modelsListCtrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, UI_SECTION_SPACING_PX)
 
 		self.SetSizer(root)

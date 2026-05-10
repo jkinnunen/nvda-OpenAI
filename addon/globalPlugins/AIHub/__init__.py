@@ -8,9 +8,14 @@ from scriptHandler import script
 from . import apikeymanager
 from . import configspec
 from .apiclient import OpenAIClient
-from .consts import ADDON_DIR, BASE_URLs, DATA_DIR
+from .consts import ADDON_DIR, BASE_URLs, DATA_DIR, Provider
 from .plugin_mixins import AskRecordingMixin, DialogSessionMixin, MenuMixin
 from .settings_dialog import AIHubSettingsPanel
+
+
+# Providers that may legitimately have an empty API key (Ollama uses none;
+# CustomOpenAI may rely on a base URL with no auth header).
+_OPTIONAL_API_KEY_PROVIDERS = (Provider.CustomOpenAI, Provider.Ollama)
 
 addonHandler.initTranslation()
 ROOT_ADDON_DIR = "\\".join(ADDON_DIR.split(os.sep)[:-2])
@@ -66,7 +71,7 @@ class GlobalPlugin(MenuMixin, DialogSessionMixin, AskRecordingMixin, globalPlugi
 				continue
 			api_key = manager.get_api_key()
 			base_url = manager.get_base_url() or BASE_URLs[manager.provider]
-			if provider not in ("CustomOpenAI", "Ollama") and (not api_key or not api_key.strip()):
+			if provider not in _OPTIONAL_API_KEY_PROVIDERS and (not api_key or not api_key.strip()):
 				return None
 			organization = manager.get_api_key(use_org=True)
 			org_val = organization.split(":=", 1)[1] if organization and organization.count(":=") == 1 else None

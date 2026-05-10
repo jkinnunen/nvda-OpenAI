@@ -13,6 +13,7 @@ from logHandler import log
 from .apiclient import APIConnectionError, APIStatusError
 from .conversations import ConversationFormat
 from .consts import (
+	Provider,
 	SND_CHAT_RESPONSE_RECEIVED,
 	SND_PROGRESS,
 	stop_progress_sound,
@@ -40,7 +41,7 @@ class VoxtralTTSToolDialog(ToolDialogBase):
 		super().__init__(
 			parent,
 			title=_("Tool: Voxtral TTS"),
-			provider="MistralAI",
+			provider=Provider.MistralAI,
 			size=(760, 650),
 			parentDialog=parentDialog,
 			plugin=plugin,

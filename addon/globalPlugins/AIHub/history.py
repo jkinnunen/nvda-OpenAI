@@ -109,7 +109,9 @@ class HistoryBlock:
 	displayHeader = True
 	focused = False
 	responseTerminated = False
-	pathList = None
+	# In-code attribute uses the neutral name; on-disk JSON key is still
+	# ``pathList`` for backward compatibility with previously saved conversations.
+	filesList = None
 	audioPathList = None
 	audioTranscriptList = None
 	audioPath = None

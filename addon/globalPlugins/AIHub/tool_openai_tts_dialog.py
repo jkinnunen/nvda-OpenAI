@@ -10,6 +10,7 @@ from logHandler import log
 from .apiclient import APIConnectionError, APIStatusError
 from .conversations import ConversationFormat
 from .consts import (
+	Provider,
 	SND_CHAT_RESPONSE_RECEIVED,
 	SND_PROGRESS,
 	stop_progress_sound,
@@ -50,7 +51,7 @@ class OpenAITTSToolDialog(ToolDialogBase):
 		super().__init__(
 			parent,
 			title=_("Tool: OpenAI TTS"),
-			provider="OpenAI",
+			provider=Provider.OpenAI,
 			size=(780, 760),
 			parentDialog=parentDialog,
 			plugin=plugin,

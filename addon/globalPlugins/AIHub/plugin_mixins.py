@@ -114,7 +114,7 @@ class DialogSessionMixin:
 		except Exception:
 			log.debug("Refocus AI-Hub window failed", exc_info=True)
 
-	def _openMainDialog(self, pathList=None, conversationData=None, forceNew=False, openConversationInNewTab=False):
+	def _openMainDialog(self, filesList=None, conversationData=None, forceNew=False, openConversationInNewTab=False):
 		"""Create and show a non-modal conversation window."""
 		from . import conversation_dialog
 		client = self.getClient()
@@ -144,7 +144,7 @@ class DialogSessionMixin:
 			gui.mainFrame,
 			client=client,
 			conf=conf,
-			pathList=pathList,
+			filesList=filesList,
 			plugin=self,
 			conversationData=conversationData
 		)
@@ -179,25 +179,56 @@ class DialogSessionMixin:
 	def script_showMainDialog(self, gesture):
 		wx.CallAfter(self.onShowMainDialog, None, False)
 
-	def startChatSession(self, pathList):
+	def startChatSession(self, attachment):
+		"""Add an attachment to an open session, or open a new dialog with it."""
 		from . import conversation_dialog
-		instance = None
-		if conversation_dialog.addToSession and isinstance(conversation_dialog.addToSession, conversation_dialog.ConversationDialog):
-			instance = conversation_dialog.addToSession
-		elif conversation_dialog.activeChatDlg and isinstance(conversation_dialog.activeChatDlg, conversation_dialog.ConversationDialog):
-			instance = conversation_dialog.activeChatDlg
+		instance = self._findOpenConversationDialog()
 		if instance:
+			# Bring the dialog forward FIRST so the active session panel is
+			# laid out against a visible window. Adding/refreshing the file
+			# list against a hidden window means the panel sizer never picks
+			# up the Show() change and the new attachment stays invisible.
+			self._refocusHubWindow(instance)
 			page = instance.get_active_page()
-			if not page.pathList:
-				page.pathList = []
-			instance.addImageToList(pathList, True)
-			instance.updateImageList()
-			instance.SetFocus()
-			instance.Raise()
+			if page.filesList is None:
+				page.filesList = []
+			instance.addFileToList(attachment, True)
+			instance.updateFilesList()
+			# If we just dropped the attachment into a still-empty tab, retitle
+			# it to the attachment's display name (Screenshot/Navigator Object).
+			try:
+				instance._retitleEmptyTabFromAttachments()
+			except Exception:
+				log.debug("retitle tab from attachment failed", exc_info=True)
 			api.processPendingEvents()
 			ui.message(_("Image added to an existing session"))
 			return
-		wx.CallAfter(self._openMainDialog, [pathList], None, False)
+		wx.CallAfter(self._openMainDialog, [attachment], None, False)
+
+	def _findOpenConversationDialog(self):
+		"""Return a still-open ConversationDialog if any, preferring the active one."""
+		from . import conversation_dialog
+		Cls = conversation_dialog.ConversationDialog
+		for cand in (
+			conversation_dialog.addToSession,
+			conversation_dialog.activeChatDlg,
+		):
+			if isinstance(cand, Cls):
+				try:
+					if cand.IsShown():
+						return cand
+				except Exception:
+					continue
+		# Fallback: the global trackers can be cleared (Esc/onCancel) before the
+		# window is destroyed, so also scan the open-dialogs registry.
+		for dlg in reversed(getattr(self, "_openMainDialogs", []) or []):
+			if isinstance(dlg, Cls):
+				try:
+					if dlg.IsShown():
+						return dlg
+				except Exception:
+					continue
+		return None
 
 	def script_recognizeScreen(self, gesture):
 		from .imagehelper import save_screenshot

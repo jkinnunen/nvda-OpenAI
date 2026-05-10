@@ -7,6 +7,7 @@ from enum import StrEnum, auto
 from logHandler import log
 
 from . import apikeymanager
+from .consts import Provider
 
 addonHandler.initTranslation()
 
@@ -21,77 +22,94 @@ class ToolId(StrEnum):
 	OLLAMA_MODEL_MANAGER = auto()
 
 
+# Submenu group label shown to the user. We don't reuse Provider.MistralAI
+# because the user-facing brand is "Mistral", not "MistralAI".
+_GROUP_MISTRAL = "Mistral"
+
+
 # Dialog classes are loaded on first use (menu → open tool), not at addon startup.
+# ``group_label`` is the visible submenu name; ``manager_provider`` is the
+# Provider enum the dialog uses to look up API credentials.
 TOOLS_REGISTRY = (
 	{
 		"id": ToolId.VOXTRAL_TTS,
 		"label": _("Voxtral TTS..."),
-		"provider": "Mistral",
-		"manager_provider": "MistralAI",
+		"group_label": _GROUP_MISTRAL,
+		"manager_provider": Provider.MistralAI,
 		"dialog_module": ".tool_voxtral_tts_dialog",
 		"dialog_class": "VoxtralTTSToolDialog",
 	},
 	{
 		"id": ToolId.MISTRAL_OCR,
 		"label": _("OCR..."),
-		"provider": "Mistral",
-		"manager_provider": "MistralAI",
+		"group_label": _GROUP_MISTRAL,
+		"manager_provider": Provider.MistralAI,
 		"dialog_module": ".tool_mistral_ocr_dialog",
 		"dialog_class": "MistralOCRToolDialog",
 	},
 	{
 		"id": ToolId.MISTRAL_SPEECH_TO_TEXT,
 		"label": _("Speech to Text..."),
-		"provider": "Mistral",
-		"manager_provider": "MistralAI",
+		"group_label": _GROUP_MISTRAL,
+		"manager_provider": Provider.MistralAI,
 		"dialog_module": ".tool_mistral_transcription_dialog",
 		"dialog_class": "MistralSpeechToTextToolDialog",
 	},
 	{
 		"id": ToolId.LYRIA_3_PRO,
 		"label": _("Lyria 3 Pro..."),
-		"provider": "Google",
+		"group_label": Provider.Google,
+		"manager_provider": Provider.Google,
 		"dialog_module": ".tool_lyria_dialog",
 		"dialog_class": "Lyria3ProToolDialog",
 	},
 	{
 		"id": ToolId.OPENAI_TTS,
 		"label": _("TTS..."),
-		"provider": "OpenAI",
+		"group_label": Provider.OpenAI,
+		"manager_provider": Provider.OpenAI,
 		"dialog_module": ".tool_openai_tts_dialog",
 		"dialog_class": "OpenAITTSToolDialog",
 	},
 	{
 		"id": ToolId.OPENAI_TRANSCRIPTION,
 		"label": _("Transcription / Translation..."),
-		"provider": "OpenAI",
+		"group_label": Provider.OpenAI,
+		"manager_provider": Provider.OpenAI,
 		"dialog_module": ".tool_openai_transcription_dialog",
 		"dialog_class": "OpenAITranscriptionToolDialog",
 	},
 	{
 		"id": ToolId.OLLAMA_MODEL_MANAGER,
 		"label": _("Model manager..."),
-		"provider": "Ollama",
+		"group_label": Provider.Ollama,
+		"manager_provider": Provider.Ollama,
 		"dialog_module": ".tool_ollama_models_dialog",
 		"dialog_class": "OllamaModelManagerToolDialog",
 	},
 )
 
-_OPEN_TOOL_DIALOGS = []
 
-# Relative dialog modules live under globalPlugins.AIHub (parent of this package).
-_AI_HUB_PKG = __package__.rsplit(".", 1)[0] if __package__ and "." in __package__ else "globalPlugins.AIHub"
+# Order of the per-vendor submenus in the Tools menu.
+_GROUP_ORDER = (Provider.OpenAI, _GROUP_MISTRAL, Provider.Google, Provider.Ollama)
+
+_OPEN_TOOL_DIALOGS = []
 
 
 def _resolve_dialog_cls(tool_def):
-	"""Return dialog class, importing the module on first use."""
+	"""Return dialog class, importing the module on first use.
+
+	Relative dialog modules (e.g. ``.tool_openai_tts_dialog``) live next to
+	this file inside ``globalPlugins.AIHub``; passing ``__package__`` resolves
+	them against this module's own package.
+	"""
 	cls = tool_def.get("dialog_cls")
 	if cls is not None:
 		return cls
 	cached = tool_def.get("_resolved_dialog_cls")
 	if cached is not None:
 		return cached
-	mod = importlib.import_module(tool_def["dialog_module"], package=_AI_HUB_PKG)
+	mod = importlib.import_module(tool_def["dialog_module"], package=__package__)
 	cls = getattr(mod, tool_def["dialog_class"])
 	tool_def["_resolved_dialog_cls"] = cls
 	return cls
@@ -106,35 +124,34 @@ def _resolve_plugin(parent, plugin=None):
 
 
 def _populate_tools_provider_submenus(menu, parent, plugin):
-	provider_order = ("OpenAI", "Mistral", "Google", "Ollama")
-	for provider_name in provider_order:
-		provider_tools = [td for td in TOOLS_REGISTRY if td.get("provider") == provider_name]
-		if not provider_tools:
+	for group_label in _GROUP_ORDER:
+		group_tools = [td for td in TOOLS_REGISTRY if td.get("group_label") == group_label]
+		if not group_tools:
 			continue
 		submenu = wx.Menu()
-		for tool_def in provider_tools:
+		for tool_def in group_tools:
 			item = submenu.Append(wx.ID_ANY, tool_def["label"])
 			submenu.Bind(
 				wx.EVT_MENU,
 				lambda evt, td=tool_def: open_tool_dialog(parent, td, plugin=plugin),
 				id=item.GetId(),
 			)
-		menu.AppendSubMenu(submenu, provider_name)
+		menu.AppendSubMenu(submenu, str(group_label))
 
 
 def open_tool_dialog(parent, tool_def, conversationData=None, plugin=None):
-	provider = tool_def.get("provider")
-	manager_provider = tool_def.get("manager_provider") or provider
+	manager_provider = tool_def.get("manager_provider")
+	group_label = tool_def.get("group_label")
 	if manager_provider:
 		try:
 			manager = apikeymanager.get(manager_provider)
 		except Exception:
 			manager = None
 		if manager and not manager.isReady():
-			provider_label = provider or manager_provider
+			provider_label = group_label or manager_provider
 			wx.MessageBox(
 				_("No account configured for %s. Please add an account for this provider in AI-Hub settings.") % provider_label,
-				"OpenAI",
+				"AI-Hub",
 				wx.OK | wx.ICON_ERROR,
 			)
 			return

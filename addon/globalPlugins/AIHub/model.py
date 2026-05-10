@@ -5,6 +5,7 @@ import addonHandler
 from logHandler import log
 from . import apikeymanager
 from .anthropicthinking import get_anthropic_thinking_profile
+from .consts import Provider, ReasoningEffort
 
 addonHandler.initTranslation()
 
@@ -65,7 +66,7 @@ class Model:
 	@property
 	def supports_adaptive_thinking(self):
 		"""True if model supports Anthropic adaptive thinking."""
-		if self.provider != "Anthropic":
+		if self.provider != Provider.Anthropic:
 			return False
 		profile = get_anthropic_thinking_profile(self.id)
 		return bool(profile.get("adaptive_supported"))
@@ -73,7 +74,7 @@ class Model:
 	@property
 	def adaptive_choice_visible(self):
 		"""True if user can choose adaptive vs manual for this Anthropic model."""
-		if self.provider != "Anthropic":
+		if self.provider != Provider.Anthropic:
 			return False
 		profile = get_anthropic_thinking_profile(self.id)
 		return bool(profile.get("adaptive_choice_visible"))
@@ -83,29 +84,42 @@ class Model:
 		"""Tuple of (value, label) for effort dropdown, or () if no configurable effort."""
 		if not self.reasoning:
 			return ()
-		if self.provider == "Anthropic":
+		if self.provider == Provider.Anthropic:
 			profile = get_anthropic_thinking_profile(self.id)
+			# xhigh / max are Anthropic-only and intentionally not part of the
+			# ReasoningEffort enum (see consts.ReasoningEffort docstring).
 			labels = {
-				"low": _("Low"),
-				"medium": _("Medium"),
-				"high": _("High"),
+				ReasoningEffort.LOW.value: _("Low"),
+				ReasoningEffort.MEDIUM.value: _("Medium"),
+				ReasoningEffort.HIGH.value: _("High"),
 				"xhigh": _("Extra high"),
 				"max": _("Maximum"),
 			}
-			levels = profile.get("effort_levels") or ("low", "medium", "high")
+			levels = profile.get("effort_levels") or (
+				ReasoningEffort.LOW.value,
+				ReasoningEffort.MEDIUM.value,
+				ReasoningEffort.HIGH.value,
+			)
 			return tuple((lv, labels.get(lv, lv.title())) for lv in levels)
 		# xAI grok-3-mini: only low, high
-		if self.provider == "xAI" and "grok-3-mini" in self.id:
-			return (("low", _("Low")), ("high", _("High")))
+		if self.provider == Provider.xAI and "grok-3-mini" in self.id:
+			return (
+				(ReasoningEffort.LOW.value, _("Low")),
+				(ReasoningEffort.HIGH.value, _("High")),
+			)
 		# OpenAI o1/o3: low, medium, high
-		if self.supports_adaptive_thinking or self.provider == "OpenAI":
-			return (("low", _("Low")), ("medium", _("Medium")), ("high", _("High")))
+		if self.supports_adaptive_thinking or self.provider == Provider.OpenAI:
+			return (
+				(ReasoningEffort.LOW.value, _("Low")),
+				(ReasoningEffort.MEDIUM.value, _("Medium")),
+				(ReasoningEffort.HIGH.value, _("High")),
+			)
 		# Google, Mistral, OpenRouter: full range
 		return (
-			("minimal", _("Minimal")),
-			("low", _("Low")),
-			("medium", _("Medium")),
-			("high", _("High")),
+			(ReasoningEffort.MINIMAL.value, _("Minimal")),
+			(ReasoningEffort.LOW.value, _("Low")),
+			(ReasoningEffort.MEDIUM.value, _("Medium")),
+			(ReasoningEffort.HIGH.value, _("High")),
 		)
 
 	def getDescription(self):
@@ -145,15 +159,15 @@ class Model:
 
 
 PROVIDER_URL = {
-	"MistralAI": "https://raw.githubusercontent.com/SigmaNight/model-metadata/refs/heads/master/data/mistralai.json",
-	"OpenAI": "https://raw.githubusercontent.com/SigmaNight/model-metadata/refs/heads/master/data/openai.json",
-	"DeepSeek": "https://raw.githubusercontent.com/SigmaNight/model-metadata/refs/heads/master/data/deepseek.json",
-	"CustomOpenAI": "",
-	"Ollama": "",
-	"OpenRouter": "https://openrouter.ai/api/v1/models",
-	"Anthropic": "https://raw.githubusercontent.com/SigmaNight/model-metadata/refs/heads/master/data/anthropic.json",
-	"xAI": "https://raw.githubusercontent.com/SigmaNight/model-metadata/refs/heads/master/data/x-ai.json",
-	"Google": "https://raw.githubusercontent.com/SigmaNight/model-metadata/refs/heads/master/data/google.json",
+	Provider.MistralAI: "https://raw.githubusercontent.com/SigmaNight/model-metadata/refs/heads/master/data/mistralai.json",
+	Provider.OpenAI: "https://raw.githubusercontent.com/SigmaNight/model-metadata/refs/heads/master/data/openai.json",
+	Provider.DeepSeek: "https://raw.githubusercontent.com/SigmaNight/model-metadata/refs/heads/master/data/deepseek.json",
+	Provider.CustomOpenAI: "",
+	Provider.Ollama: "",
+	Provider.OpenRouter: "https://openrouter.ai/api/v1/models",
+	Provider.Anthropic: "https://raw.githubusercontent.com/SigmaNight/model-metadata/refs/heads/master/data/anthropic.json",
+	Provider.xAI: "https://raw.githubusercontent.com/SigmaNight/model-metadata/refs/heads/master/data/x-ai.json",
+	Provider.Google: "https://raw.githubusercontent.com/SigmaNight/model-metadata/refs/heads/master/data/google.json",
 }
 
 
@@ -287,7 +301,7 @@ def _parse_model_obj(provider: str, model: dict) -> Model:
 
 	# Web search: Google Gemini 2.5+ and 3 support grounding with Google Search
 	model_id = model.get("id", "")
-	if provider == "Google" and ("gemini-2.5" in model_id or "gemini-3" in model_id):
+	if provider == Provider.Google and ("gemini-2.5" in model_id or "gemini-3" in model_id):
 		if "google_search" not in supported:
 			supported = list(supported) + ["google_search"]
 
@@ -329,7 +343,7 @@ def _parse_model_obj(provider: str, model: dict) -> Model:
 	)
 
 
-def clearModelCache(provider: str = None):
+def clearModelCache(provider=None):
 	"""Clear cached models. If provider is None, clear all providers."""
 	global _models
 	if provider is None:
@@ -340,17 +354,22 @@ def clearModelCache(provider: str = None):
 			del _models[key]
 
 
-def getModels(provider: str, account_id: str = None) -> list:
+# Providers whose model list lives at a per-account base URL rather than a
+# fixed PROVIDER_URL. Mirrors apikeymanager._USER_ENDPOINT_PROVIDERS.
+_DYNAMIC_BASE_URL_PROVIDERS = (Provider.CustomOpenAI, Provider.Ollama)
+
+
+def getModels(provider, account_id: str = None) -> list:
 	"""Fetch and parse model list for provider. Supports both 'models' and 'data' keys.
 	Returns empty list on network or parse errors; logs failures."""
 	if provider is None or provider not in PROVIDER_URL:
 		raise ValueError("Unknown provider %s" % provider)
 	global _models
-	cache_key = provider if provider not in ("CustomOpenAI", "Ollama") else f"{provider}:{account_id or '__active__'}"
+	cache_key = provider if provider not in _DYNAMIC_BASE_URL_PROVIDERS else f"{provider}:{account_id or '__active__'}"
 	if cache_key in _models:
 		return _models[cache_key]
 
-	if provider == "Ollama":
+	if provider == Provider.Ollama:
 		manager = apikeymanager.get(provider)
 		base_url = manager.get_base_url(account_id=account_id)
 		if not base_url:
@@ -379,7 +398,7 @@ def getModels(provider: str, account_id: str = None) -> list:
 			except Exception as e:
 				log.warning("OpenAI addon: error fetching models for %s: %s", provider, e)
 				return []
-	elif provider == "CustomOpenAI":
+	elif provider == Provider.CustomOpenAI:
 		manager = apikeymanager.get(provider)
 		base_url = manager.get_base_url(account_id=account_id)
 		if not base_url:
@@ -394,7 +413,7 @@ def getModels(provider: str, account_id: str = None) -> list:
 		url = PROVIDER_URL[provider]
 		headers = {"User-Agent": "Mozilla/5.0 (compatible; NVDA-OpenAI-Addon/1.0)"}
 		ollama_tags = {}
-	if provider not in ("Ollama",):
+	if provider != Provider.Ollama:
 		req = urllib.request.Request(
 			url,
 			headers=headers
@@ -424,7 +443,7 @@ def getModels(provider: str, account_id: str = None) -> list:
 		model_id = m.get("id")
 		if not model_id:
 			continue
-		if provider == "Ollama":
+		if provider == Provider.Ollama:
 			tag = ollama_tags.get(model_id) or ollama_tags.get(model_id + ":latest") or {}
 			details = tag.get("details", {}) if isinstance(tag, dict) else {}
 			model_obj = dict(m)

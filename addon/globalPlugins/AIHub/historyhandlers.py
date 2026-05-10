@@ -10,7 +10,7 @@ import ui
 from logHandler import log
 
 from .history import TextSegment
-from .image_file import ImageFile, ImageFileTypes, URL_PATTERN
+from .image_file import AttachmentFile, AttachmentFileTypes, URL_PATTERN
 from .propertiesutils import aggregate_blocks_usage, build_message_properties_html, format_token_usage_lines
 
 addonHandler.initTranslation()
@@ -39,25 +39,39 @@ class HistoryHandlersMixin:
 		return None
 
 	def _getBlockTextByKind(self, block, kind):
+		"""Return ``(label, text)`` for the requested kind on ``block``.
+
+		``text`` is always read from the underlying HistoryBlock data
+		(``block.prompt`` / ``block.responseText`` / ``block.reasoningText``),
+		never from the rendered messagesTextCtrl segment, so callers get the
+		canonical assistant/user text without UI artifacts (trailing newlines,
+		``<think>`` wrappers, label prefixes, etc.). ``label`` is still derived
+		from the rendered segment label because it's only used for speech
+		announcements.
+		"""
 		if kind == "prompt":
 			label = block.segmentPromptLabel.getText() if block.segmentPromptLabel else ""
-			text = block.segmentPrompt.getText() if block.segmentPrompt else (block.prompt or "")
-			return label, text
+			return label, (block.prompt or "")
 		if kind == "response":
 			label = block.segmentResponseLabel.getText() if block.segmentResponseLabel else ""
-			text = block.segmentResponse.getText() if block.segmentResponse else (block.responseText or "")
-			return label, text
+			return label, (block.responseText or "")
 		if kind == "reasoning":
 			label = block.segmentReasoningLabel.getText() if block.segmentReasoningLabel else ""
-			text = block.segmentReasoning.getText() if block.segmentReasoning else (getattr(block, "reasoningText", "") or "")
-			return label, text
+			return label, (getattr(block, "reasoningText", "") or "")
 		return "", ""
 
 	def _assistantClipboardPlainText(self, block):
-		_, response_text = self._getBlockTextByKind(block, "response")
+		"""Assistant-side text for clipboard / system-prompt copy.
+
+		Always uses raw object data; when ``_showThinkingInHistory`` is on we
+		also prepend the reasoning so the clipboard mirrors what the user
+		hears in the history pane (reasoning before the visible answer).
+		"""
+		response_text = block.responseText or ""
 		if not getattr(self, "_showThinkingInHistory", False):
 			return response_text
-		if not (getattr(block, "reasoningText", "") or "").strip():
+		reasoning = (getattr(block, "reasoningText", "") or "").strip()
+		if not reasoning:
 			return response_text
 		return f"{self._formatThinkingForHistory(block.reasoningText)}{response_text}"
 
@@ -166,16 +180,16 @@ class HistoryHandlersMixin:
 		model = self.getCurrentModel() if hasattr(self, "getCurrentModel") else None
 		provider = getattr(model, "provider", "") if model else ""
 		for path in clean_paths:
-			if self.imageExists(path):
+			if self.fileExists(path):
 				continue
-			image_file = ImageFile(path)
-			unsupported = self.getUnsupportedAttachments(provider=provider, pathList=[image_file])
+			attachment = AttachmentFile(path)
+			unsupported = self.getUnsupportedAttachments(provider=provider, filesList=[attachment])
 			if unsupported:
 				rejected.append(path)
 				continue
-			self.pathList.append(image_file)
+			self.filesList.append(attachment)
 			added_count += 1
-			if image_file.type in (ImageFileTypes.IMAGE_LOCAL, ImageFileTypes.IMAGE_URL):
+			if attachment.type in (AttachmentFileTypes.IMAGE_LOCAL, AttachmentFileTypes.IMAGE_URL):
 				added_image = True
 		if rejected:
 			ui.message(_("Some files were skipped because they are not supported by the selected provider."))
@@ -183,7 +197,7 @@ class HistoryHandlersMixin:
 			return False
 		if added_image:
 			self.ensureModelVisionSelected()
-		self.updateImageList()
+		self.updateFilesList()
 		ui.message(_("%d file(s) attached.") % added_count)
 		return True
 
@@ -208,18 +222,18 @@ class HistoryHandlersMixin:
 							return
 					if len(lines) == 1 and re.match(URL_PATTERN, lines[0]):
 						try:
-							self.pathList = self.pathList or []
-							url_file = ImageFile(lines[0])
+							self.filesList = self.filesList or []
+							url_file = AttachmentFile(lines[0])
 							model = self.getCurrentModel() if hasattr(self, "getCurrentModel") else None
 							provider = getattr(model, "provider", "") if model else ""
-							if self.getUnsupportedAttachments(provider=provider, pathList=[url_file]):
+							if self.getUnsupportedAttachments(provider=provider, filesList=[url_file]):
 								self._insertPromptText(text)
 								return
-							if not self.imageExists(lines[0]):
-								self.pathList.append(url_file)
-								if url_file.type in (ImageFileTypes.IMAGE_LOCAL, ImageFileTypes.IMAGE_URL):
+							if not self.fileExists(lines[0]):
+								self.filesList.append(url_file)
+								if url_file.type in (AttachmentFileTypes.IMAGE_LOCAL, AttachmentFileTypes.IMAGE_URL):
 									self.ensureModelVisionSelected()
-								self.updateImageList()
+								self.updateFilesList()
 								ui.message(_("URL attached."))
 								return
 						except Exception as err:
@@ -582,13 +596,13 @@ class HistoryHandlersMixin:
 		menu.AppendSeparator()
 		item_id = wx.NewIdRef()
 		menu.Append(item_id, _("Attach image from f&ile...") + " (Ctrl+I)")
-		self.Bind(wx.EVT_MENU, self.onImageDescriptionFromFilePath, id=item_id)
+		self.Bind(wx.EVT_MENU, self.onFileDescriptionFromFilePath, id=item_id)
 		item_id = wx.NewIdRef()
 		menu.Append(item_id, _("Attach image from &URL...") + " (Ctrl+U)")
-		self.Bind(wx.EVT_MENU, self.onImageDescriptionFromURL, id=item_id)
+		self.Bind(wx.EVT_MENU, self.onFileDescriptionFromURL, id=item_id)
 		item_id = wx.NewIdRef()
 		menu.Append(item_id, _("Attach image from &screenshot") + " (Ctrl+E)")
-		self.Bind(wx.EVT_MENU, self.onImageDescriptionFromScreenshot, id=item_id)
+		self.Bind(wx.EVT_MENU, self.onFileDescriptionFromScreenshot, id=item_id)
 		item_id = wx.NewIdRef()
 		menu.Append(item_id, _("Attach audio from f&ile..."))
 		self.Bind(wx.EVT_MENU, self.onAddAudioFromFile, id=item_id)

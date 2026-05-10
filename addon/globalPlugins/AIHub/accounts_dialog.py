@@ -7,8 +7,12 @@ import gui
 import wx
 
 from . import apikeymanager
-from .consts import BASE_URLs
+from .consts import BASE_URLs, Provider
 from .providertools_helpers import add_labeled_factory
+
+
+# Providers whose configuration UI exposes the custom-base-URL field.
+_USER_ENDPOINT_PROVIDERS = (Provider.CustomOpenAI, Provider.Ollama)
 
 addonHandler.initTranslation()
 
@@ -86,12 +90,12 @@ class AccountDialog(wx.Dialog):
 
 	def onProviderChoice(self, evt):
 		provider = self.providerChoice.GetStringSelection()
-		uses_custom_url = provider in ("CustomOpenAI", "Ollama")
+		uses_custom_url = provider in _USER_ENDPOINT_PROVIDERS
 		self.customBaseUrlText.Enable(uses_custom_url)
-		self.orgNameText.Enable(provider not in ("CustomOpenAI", "Ollama"))
-		self.orgKeyText.Enable(provider not in ("CustomOpenAI", "Ollama"))
-		if provider == "Ollama" and not self.customBaseUrlText.GetValue().strip():
-			self.customBaseUrlText.SetValue(BASE_URLs.get("Ollama", "http://127.0.0.1:11434/v1"))
+		self.orgNameText.Enable(not uses_custom_url)
+		self.orgKeyText.Enable(not uses_custom_url)
+		if provider == Provider.Ollama and not self.customBaseUrlText.GetValue().strip():
+			self.customBaseUrlText.SetValue(BASE_URLs.get(Provider.Ollama, "http://127.0.0.1:11434/v1"))
 
 	def _normalize_custom_base_url(self, value: str) -> str:
 		url = (value or "").strip()
@@ -103,10 +107,10 @@ class AccountDialog(wx.Dialog):
 
 	def getData(self):
 		provider = self.providerChoice.GetStringSelection()
-		if provider in ("CustomOpenAI", "Ollama"):
+		if provider in _USER_ENDPOINT_PROVIDERS:
 			base_url = self._normalize_custom_base_url(self.customBaseUrlText.GetValue())
-			if provider == "Ollama" and not base_url:
-				base_url = BASE_URLs.get("Ollama", "http://127.0.0.1:11434/v1")
+			if provider == Provider.Ollama and not base_url:
+				base_url = BASE_URLs.get(Provider.Ollama, "http://127.0.0.1:11434/v1")
 		else:
 			base_url = ""
 		return {
@@ -176,7 +180,7 @@ class AccountsManagementDialog(wx.Dialog):
 				}
 				entry["key"] = f"{provider}/{entry['id']}"
 				label = f"{provider} / {entry['name']}"
-				if provider in ("CustomOpenAI", "Ollama") and entry["base_url"]:
+				if provider in _USER_ENDPOINT_PROVIDERS and entry["base_url"]:
 					label = f"{label} - {entry['base_url']}"
 				if entry["id"] == active_id:
 					label = f"{label} ({_('default')})"
@@ -215,11 +219,11 @@ class AccountsManagementDialog(wx.Dialog):
 			return
 		data = dlg.getData()
 		dlg.Destroy()
-		if data["provider"] == "CustomOpenAI":
+		if data["provider"] == Provider.CustomOpenAI:
 			if not data["base_url"]:
 				gui.messageBox(_("Custom base URL is required for CustomOpenAI accounts."), _("AI-Hub"), wx.OK | wx.ICON_ERROR)
 				return
-		elif data["provider"] == "Ollama":
+		elif data["provider"] == Provider.Ollama:
 			pass
 		elif not data["api_key"]:
 			gui.messageBox(_("API key is required."), _("AI-Hub"), wx.OK | wx.ICON_ERROR)
@@ -245,11 +249,11 @@ class AccountsManagementDialog(wx.Dialog):
 			return
 		updated = dlg.getData()
 		dlg.Destroy()
-		if updated["provider"] == "CustomOpenAI":
+		if updated["provider"] == Provider.CustomOpenAI:
 			if not updated["base_url"]:
 				gui.messageBox(_("Custom base URL is required for CustomOpenAI accounts."), _("AI-Hub"), wx.OK | wx.ICON_ERROR)
 				return
-		elif updated["provider"] == "Ollama":
+		elif updated["provider"] == Provider.Ollama:
 			pass
 		elif not updated["api_key"]:
 			gui.messageBox(_("API key is required."), _("AI-Hub"), wx.OK | wx.ICON_ERROR)

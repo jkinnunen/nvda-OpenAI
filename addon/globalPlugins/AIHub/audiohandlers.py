@@ -66,23 +66,29 @@ class AudioHandlersMixin:
 		self._selectModelById(audio_models[0].id)
 
 	def updateAudioList(self, focusPrompt=True):
-		self.audioListCtrl.DeleteAllItems()
-		if not self.audioPathList:
-			self.audioLabel.Hide()
-			self.audioListCtrl.Hide()
+		# Mirror updateFilesList: read/write the visible active page directly so
+		# new attachments cannot land on the wrong page when a worker is running.
+		page = self.get_active_page()
+		audio_list = getattr(page, "audioPathList", None) or []
+		audio_label = page.audioLabel
+		audio_ctrl = page.audioListCtrl
+		audio_ctrl.DeleteAllItems()
+		if not audio_list:
+			audio_label.Hide()
+			audio_ctrl.Hide()
 			self._sync_attachments_section_header()
-			self.Layout()
+			self._relayout_attachments(anchor=audio_ctrl)
 			if focusPrompt:
-				self.promptTextCtrl.SetFocus()
+				page.promptTextCtrl.SetFocus()
 			return
-		self.audioLabel.Show()
-		self.audioListCtrl.Show()
+		audio_label.Show()
+		audio_ctrl.Show()
 		self._sync_attachments_section_header()
-		for path in self.audioPathList:
+		for path in audio_list:
 			path_str = path if isinstance(path, str) else getattr(path, "path", str(path))
 			name = os.path.basename(path_str) if path_str else "?"
-			self.audioListCtrl.Append([name, path_str or ""])
-		self._attachment_list_end_refresh(self.audioListCtrl, focus_prompt_if_empty=False)
+			audio_ctrl.Append([name, path_str or ""])
+		self._attachment_list_end_refresh(audio_ctrl, focus_prompt_if_empty=False)
 
 	def onAddAudioFromFile(self, evt):
 		dlg = wx.FileDialog(

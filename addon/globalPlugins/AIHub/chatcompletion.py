@@ -14,8 +14,20 @@ import gui
 from logHandler import log
 
 from .apiclient import Choice, ChatCompletion, configure_client_for_provider
-from .consts import TEMP_DIR, TOP_P_MIN, TOP_P_MAX, TTS_DEFAULT_VOICE, stop_progress_sound
-from .consts import SND_PROGRESS, SND_CHAT_RESPONSE_PENDING, SND_CHAT_RESPONSE_SENT
+from .consts import (
+	ContentType,
+	Provider,
+	ReasoningEffort,
+	Role,
+	SND_CHAT_RESPONSE_PENDING,
+	SND_CHAT_RESPONSE_SENT,
+	SND_PROGRESS,
+	TEMP_DIR,
+	TOP_P_MAX,
+	TOP_P_MIN,
+	TTS_DEFAULT_VOICE,
+	stop_progress_sound,
+)
 from .history import HistoryBlock
 from .mediastore import persist_local_file
 from .recordthread import transcribe_audio_file
@@ -25,6 +37,51 @@ addonHandler.initTranslation()
 
 # Speak streamed chunks this often even without newline/sentence punctuation (models often stream long clauses).
 _STREAM_SPEECH_FLUSH_CHARS = 96
+
+# Natural points to break streamed text into a spoken utterance:
+#   - End-of-sentence punctuation (.!?…) or clause separators (:;), optionally
+#     followed by a closing quote/bracket, when followed by whitespace.
+#   - Any newline character.
+# We match anywhere inside the buffer (not just the end), so a chunk that arrives
+# as "Hello. How are you" still flushes "Hello. " and keeps "How are you" buffered.
+_PHRASE_BOUNDARY_RE = re.compile(
+	r"""
+	(?: [.!?…:;] [\"'\)\]]* (?=[ \t\r\n]) )  # terminator + optional closer + whitespace
+	| \n                                      # any newline
+	""",
+	re.VERBOSE,
+)
+
+
+def _last_phrase_boundary(buffer: str) -> int:
+	"""Index of the last natural phrase break in ``buffer`` (split point), or -1."""
+	last = -1
+	for m in _PHRASE_BOUNDARY_RE.finditer(buffer):
+		last = m.end()
+	return last
+
+# Providers that follow OpenAI's stream_options={include_usage:true} convention
+# for surfacing usage on the final stream chunk.
+_STREAM_USAGE_PROVIDERS = (
+	Provider.OpenAI,
+	Provider.CustomOpenAI,
+	Provider.OpenRouter,
+	Provider.xAI,
+)
+
+# Providers that accept reasoning_effort directly on chat completions.
+_REASONING_EFFORT_PROVIDERS = (
+	Provider.OpenAI,
+	Provider.CustomOpenAI,
+	Provider.MistralAI,
+	Provider.OpenRouter,
+	Provider.Google,
+	Provider.DeepSeek,
+)
+
+# Providers that cap stop sequences at 4 (per OpenAI chat-completions docs);
+# every other provider supports the more generous Anthropic 16-sequence cap.
+_STOP_SEQUENCE_CAP_4_PROVIDERS = (Provider.OpenAI, Provider.CustomOpenAI)
 
 
 def _strip_markdown_for_speech(fragment: str) -> str:
@@ -47,14 +104,14 @@ def _strip_markdown_for_speech(fragment: str) -> str:
 	return t
 
 
-def _parse_stop_sequences(text: str, *, provider: str) -> list[str]:
+def _parse_stop_sequences(text: str, *, provider) -> list[str]:
 	"""Non-empty lines from multiline stop UI; cap follows common provider limits (OpenAI chat: 4)."""
 	seq = []
 	for line in (text or "").replace("\r\n", "\n").split("\n"):
 		s = line.strip()
 		if s:
 			seq.append(s)
-	cap = 4 if provider in ("OpenAI", "CustomOpenAI") else 16
+	cap = 4 if provider in _STOP_SEQUENCE_CAP_4_PROVIDERS else 16
 	return seq[:cap]
 
 
@@ -81,6 +138,92 @@ class CompletionThread(threading.Thread):
 	def _log_timing(self, debug, label, elapsed):
 		if debug and elapsed is not None:
 			log.info("OpenAI [timing] %s: %.2fs", label, elapsed)
+
+	def _configureReasoning(self, params: dict, model, conf, checkbox_enabled: bool) -> bool:
+		"""Add reasoning-related params for the given provider/model.
+
+		Returns True when reasoning is being requested (so the caller can
+		choose ``max_completion_tokens`` over ``max_tokens``).
+
+		Honoring the "Reasoning enabled" checkbox is provider-specific: most
+		APIs default to reasoning ON when the model supports it, so simply
+		omitting params would still bill us for reasoning tokens. We send the
+		appropriate disable signal whenever the official API exposes one:
+
+		* Anthropic — extended thinking is opt-in (no ``thinking`` param = OFF).
+		* OpenRouter — ``reasoning: {enabled: false, exclude: true}`` works for
+		  every upstream model and also suppresses the tokens from the response.
+		* Google — gemini-2.5 supports ``reasoning_effort: "none"``; gemini-3
+		  cannot be disabled per Google's docs.
+		* MistralAI — adjustable models (mistral-small/medium-3-5) accept
+		  ``reasoning_effort: "none"``; magistral-* always reasons.
+		* DeepSeek — newer models accept ``thinking: {type: "disabled"}``;
+		  deepseek-reasoner always reasons per DeepSeek docs.
+		* Ollama — the OpenAI-compat endpoint accepts ``think: false``.
+		* OpenAI o-series / xAI grok — always reason; no API-level disable.
+		"""
+		model_supports_reasoning = bool(getattr(model, "reasoning", False))
+		use_reasoning = model_supports_reasoning and checkbox_enabled
+		provider = model.provider
+		effort = conf.get("reasoningEffort", ReasoningEffort.MEDIUM.value)
+		if use_reasoning:
+			self._applyReasoningEnabled(params, model, provider, effort, conf)
+		else:
+			self._applyReasoningDisabled(params, model, provider)
+		return use_reasoning
+
+	def _applyReasoningEnabled(self, params: dict, model, provider, effort: str, conf) -> None:
+		"""Send the "please reason" signal in whatever shape the provider expects."""
+		if "include_reasoning" in getattr(model, "supportedParameters", []):
+			params["include_reasoning"] = True
+		if provider == Provider.Anthropic:
+			params["reasoning_enabled"] = True
+			params["reasoning_effort"] = effort
+			params["adaptive_thinking"] = conf.get("adaptiveThinking", True)
+			return
+		if provider == Provider.xAI:
+			if "grok-3-mini" in model.id:
+				params["reasoning_effort"] = (
+					ReasoningEffort.HIGH.value
+					if effort in (ReasoningEffort.MEDIUM.value, ReasoningEffort.HIGH.value)
+					else ReasoningEffort.LOW.value
+				)
+			# grok-4 has no reasoning_effort param; it always reasons.
+			return
+		if provider == Provider.Ollama:
+			params["think"] = True
+			return
+		if provider in _REASONING_EFFORT_PROVIDERS:
+			params["reasoning_effort"] = effort
+			return
+
+	def _applyReasoningDisabled(self, params: dict, model, provider) -> None:
+		"""Send the right "no reasoning" signal so providers don't reason by default."""
+		if not getattr(model, "reasoning", False):
+			# Non-reasoning model: nothing to disable.
+			return
+		if provider == Provider.OpenRouter:
+			params["reasoning"] = {"enabled": False, "exclude": True}
+			return
+		if provider == Provider.Google:
+			# gemini-3 cannot disable thinking per Google docs.
+			if "gemini-2.5" in model.id:
+				params["reasoning_effort"] = "none"
+			return
+		if provider == Provider.MistralAI:
+			# magistral-* is a "native" reasoning model and cannot be disabled.
+			if "magistral" not in model.id:
+				params["reasoning_effort"] = "none"
+			return
+		if provider == Provider.DeepSeek:
+			# deepseek-reasoner always reasons; newer models accept thinking.type=disabled.
+			if "reasoner" not in model.id:
+				params["thinking"] = {"type": "disabled"}
+			return
+		if provider == Provider.Ollama:
+			params["think"] = False
+			return
+		# OpenAI o-series, Anthropic (default off), xAI grok-*: nothing to send.
 
 	def _set_block_usage_from_response(self, block, response):
 		"""Copy normalized usage fields from response to HistoryBlock."""
@@ -176,25 +319,35 @@ class CompletionThread(threading.Thread):
 		)
 		if not any(flag in lower for flag in indicators):
 			return None
-		if provider == "Anthropic":
+		if provider == Provider.Anthropic:
 			hint = _(
-				"Anthropic document support is best-effort here (PDF as document blocks, text files inlined). "
-				"If this file is rejected, try OpenAI provider for native Responses file-input support."
+				"Anthropic accepts PDF as native document blocks and inlines plain-text files. "
+				"Other formats (.docx, .xlsx, .csv, …) must be converted to PDF or plain text."
 			)
-		elif provider == "Google":
+		elif provider == Provider.Google:
 			hint = _(
-				"Google document support is best-effort through compatibility endpoints. "
-				"Try OpenAI provider for native Responses file-input support, or convert the file to PDF/text."
+				"Google's chat-completions endpoint does not accept binary documents. "
+				"Plain-text files are inlined automatically; for PDFs use OpenAI, Anthropic, OpenRouter, Mistral, or xAI."
 			)
-		elif provider != "OpenAI":
+		elif provider == Provider.OpenRouter:
 			hint = _(
-				"This provider uses a best-effort document compatibility path and may reject some file types. "
-				"Try OpenAI provider for native Responses file-input support."
+				"OpenRouter parses PDFs into the underlying model. "
+				"If this file was rejected, the underlying model may not support documents — try another model."
+			)
+		elif provider == Provider.MistralAI:
+			hint = _(
+				"Mistral expects documents via the document_url shape (URL or data URI). "
+				"For OCR of scanned files, use the Mistral OCR tool."
+			)
+		elif provider == Provider.OpenAI:
+			hint = _(
+				"The selected OpenAI model rejected this document. "
+				"Try another OpenAI model with file-input support or use a supported document format."
 			)
 		else:
 			hint = _(
-				"The selected model/provider rejected this document. "
-				"Try another OpenAI model with document support or use a supported document format."
+				"The selected provider does not natively accept binary documents on its chat endpoint. "
+				"Plain-text files are inlined automatically; for PDFs use OpenAI, Anthropic, OpenRouter, Mistral, or xAI."
 			)
 		return f"{base_message}\n\n{hint}"
 
@@ -233,7 +386,7 @@ class CompletionThread(threading.Thread):
 			conf["topP"] = wnd.topPSpinCtrl.GetValue()
 		block.temperature = temperature
 		block.topP = topP
-		block.pathList = wnd.pathList.copy()
+		block.filesList = wnd.filesList.copy()
 		block.audioPathList = wnd.audioPathList.copy()
 		block.timing = {"startedAt": time.time()}
 
@@ -277,13 +430,14 @@ class CompletionThread(threading.Thread):
 		nbAudio = 0
 		nbDocuments = 0
 		for message in messages:
-			if message["role"] == "user" and not isinstance(message["content"], str):
+			if message["role"] == Role.USER and not isinstance(message["content"], str):
 				for c in message["content"]:
-					if c.get("type") == "image_url":
+					ctype = c.get("type")
+					if ctype == ContentType.IMAGE_URL:
 						nbImages += 1
-					elif c.get("type") == "input_audio":
+					elif ctype == ContentType.INPUT_AUDIO:
 						nbAudio += 1
-					elif c.get("type") == "input_file":
+					elif ctype == ContentType.INPUT_FILE:
 						nbDocuments += 1
 		msg = _("Uploading %s, please wait...") % ", ".join(
 			([_("%d image(s)") % nbImages] if nbImages else []) +
@@ -304,7 +458,7 @@ class CompletionThread(threading.Thread):
 			"messages": messages,
 			"stream": use_stream
 		}
-		if use_stream and model.provider in ("OpenAI", "CustomOpenAI", "OpenRouter", "xAI"):
+		if use_stream and model.provider in _STREAM_USAGE_PROVIDERS:
 			params["stream_options"] = {"include_usage": True}
 		if audio_output or nbAudio > 0:
 			voice = conf.get("TTSVoice") or TTS_DEFAULT_VOICE
@@ -354,32 +508,17 @@ class CompletionThread(threading.Thread):
 				params["presence_penalty"] = pp
 				data["presence_penalty_%s" % model.id] = wnd.advancedPresPenaltySpinCtrl.GetValue()
 		reasoningEnabled = wnd.reasoningModeCheckBox.IsChecked()
-		useReasoning = getattr(model, "reasoning", False) and reasoningEnabled
-		if useReasoning and "include_reasoning" in getattr(model, "supportedParameters", []):
-			params["include_reasoning"] = True
+		useReasoning = self._configureReasoning(params, model, conf, reasoningEnabled)
 		if maxTokens > 0:
 			params["max_completion_tokens" if useReasoning else "max_tokens"] = maxTokens
-		effort = conf.get("reasoningEffort", "medium")
+		# Resolve the provider once up-front: it's needed both for provider-specific
+		# request shaping below AND for the error path further down (so it must be
+		# defined regardless of which optional branches fire).
 		provider = model.provider
-		if useReasoning:
-			if provider == "Anthropic":
-				params["reasoning_enabled"] = True
-				params["reasoning_effort"] = effort
-				params["adaptive_thinking"] = conf.get("adaptiveThinking", True)
-			elif provider == "Google":
-				params["reasoning_effort"] = effort
-			elif provider == "xAI":
-				if "grok-3-mini" in model.id:
-					params["reasoning_effort"] = "high" if effort in ("medium", "high") else "low"
-			elif provider in ("OpenAI", "CustomOpenAI", "MistralAI", "OpenRouter"):
-				params["reasoning_effort"] = effort
-		elif provider == "Google" and "gemini-2.5" in model.id:
-			params["reasoning_effort"] = "none"
 		if model.supports_web_search and wnd.webSearchCheckBox.IsChecked():
-			provider = model.provider
-			if provider == "Anthropic":
+			if provider == Provider.Anthropic:
 				params["web_search_options"] = {}
-			elif provider == "Google":
+			elif provider == Provider.Google:
 				params["tools"] = [{"google_search": {}}]
 		if debug:
 			log.info("Client base URL: %s", client.base_url)
@@ -430,7 +569,7 @@ class CompletionThread(threading.Thread):
 		self._log_timing(debug, "total", total)
 		if debug and total > 10:
 			log.info("OpenAI [timing] Request took %.1fs. If 'history' is dominant, reduce conversation length.", total)
-		wnd.pathList.clear()
+		wnd.filesList.clear()
 		wnd.audioPathList.clear()
 		wx.PostEvent(self._notifyWindow, ResultEvent())
 
@@ -439,29 +578,28 @@ class CompletionThread(threading.Thread):
 		debug = wnd.conf.get("debug", False)
 		messages = []
 		if system:
-			messages.append({"role": "system", "content": system})
+			messages.append({"role": Role.SYSTEM, "content": system})
 		t_hist = time.perf_counter()
 		wnd.getMessages(messages)
 		self._log_timing(debug, "  history (prior blocks)", time.perf_counter() - t_hist)
 		t_cur = time.perf_counter()
 		content_parts = []
 		if prompt:
-			content_parts.append({"type": "text", "text": prompt})
-		if wnd.pathList:
-			images = wnd.getImages(prompt=None)
-			content_parts.extend(images)
+			content_parts.append({"type": ContentType.TEXT, "text": prompt})
+		if wnd.filesList:
+			content_parts.extend(wnd.getFilesContent(prompt=None))
 		if wnd.audioPathList:
 			if current_audio_transcripts and any(t for t in current_audio_transcripts):
 				for t in current_audio_transcripts:
 					if t:
-						content_parts.append({"type": "text", "text": t})
+						content_parts.append({"type": ContentType.TEXT, "text": t})
 			else:
 				content_parts.extend(wnd.getAudioContent(prompt=None))
 		self._log_timing(debug, "  current message (images/audio)", time.perf_counter() - t_cur)
 		if content_parts:
-			messages.append({"role": "user", "content": content_parts})
+			messages.append({"role": Role.USER, "content": content_parts})
 		elif prompt:
-			messages.append({"role": "user", "content": prompt})
+			messages.append({"role": Role.USER, "content": prompt})
 		return messages
 
 	def abort(self):
@@ -509,6 +647,52 @@ class CompletionThread(threading.Thread):
 		wnd = self._notifyWindow
 		speechBuffer = ""
 		latest_usage = None
+		first_speech_emitted = False
+
+		def _emit_speech(text: str) -> bool:
+			"""Speak ``text`` if streaming speech is currently allowed.
+
+			Silently no-ops (returns False) when the dialog isn't focused or the
+			text reduces to nothing after markdown stripping. Sets
+			``first_speech_emitted`` only on a real spoken utterance.
+			"""
+			nonlocal first_speech_emitted
+			if not text:
+				return False
+			if not (hasattr(wnd, "canAutoReadStreamingResponse") and wnd.canAutoReadStreamingResponse()):
+				return False
+			speech_plain = _strip_markdown_for_speech(text)
+			if not speech_plain:
+				return False
+			wnd.message(speech_plain, speechOnly=True, onPromptFieldOnly=False)
+			first_speech_emitted = True
+			return True
+
+		def _decide_speech_cut() -> int:
+			"""Return the buffer index up to which we should speak now, or 0 if not yet.
+
+			Priority:
+			  1. Last completed phrase / newline anywhere in the buffer.
+			  2. Hard length cap reached -> cut at the last whitespace so we don't
+			     split a word.
+			  3. First-token early flush -> cut at the last whitespace (or speak
+			     the whole short buffer once it's at least ``early_min_chars``).
+			"""
+			cut = _last_phrase_boundary(speechBuffer)
+			if cut > 0:
+				return cut
+			if len(speechBuffer) >= _STREAM_SPEECH_FLUSH_CHARS:
+				ws = max(speechBuffer.rfind(" "), speechBuffer.rfind("\t"))
+				if ws > 0:
+					return ws + 1
+			if not first_speech_emitted and speechBuffer.strip():
+				ws = max(speechBuffer.rfind(" "), speechBuffer.rfind("\n"))
+				if ws > 0:
+					return ws + 1
+				if len(speechBuffer) >= 16:
+					return len(speechBuffer)
+			return 0
+
 		for event in response:
 			if time.time() - self.lastTime > 4:
 				self.lastTime = int(time.time())
@@ -519,42 +703,34 @@ class CompletionThread(threading.Thread):
 			usage = getattr(event, "usage", None)
 			if isinstance(usage, dict) and usage:
 				latest_usage = usage
-			if not getattr(event, "choices", None) or len(event.choices) < 1:
+			choices = getattr(event, "choices", None)
+			if not choices:
 				continue
-			choice = event.choices[0]
-			delta = choice.delta
-			if delta and getattr(delta, "reasoning", ""):
+			choice = choices[0]
+			delta = getattr(choice, "delta", None)
+			reasoning_chunk = getattr(delta, "reasoning", "") if delta else ""
+			content_chunk = getattr(delta, "content", "") if delta else ""
+			# Always update reasoning before content within a single event so the order in
+			# which they appear in HistoryBlock matches what the server sent.
+			if reasoning_chunk:
 				if "firstTokenAt" not in block.timing:
 					block.timing["firstTokenAt"] = time.time()
-				block.reasoningText += delta.reasoning
-			if delta and delta.content:
-				text = delta.content
+				block.reasoningText += reasoning_chunk
+			if content_chunk:
 				if "firstTokenAt" not in block.timing:
 					block.timing["firstTokenAt"] = time.time()
-				speechBuffer += text
-				punct_flush = (
-					speechBuffer.endswith("\n")
-					or speechBuffer.endswith(". ")
-					or speechBuffer.endswith("? ")
-					or speechBuffer.endswith("! ")
-					or speechBuffer.endswith(": ")
-				)
-				len_flush = len(speechBuffer) >= _STREAM_SPEECH_FLUSH_CHARS
-				if punct_flush or len_flush:
-					if speechBuffer.strip():
-						if hasattr(wnd, "canAutoReadStreamingResponse") and wnd.canAutoReadStreamingResponse():
-							speech_plain = _strip_markdown_for_speech(speechBuffer)
-							if speech_plain:
-								wnd.message(speech_plain, speechOnly=True, onPromptFieldOnly=False)
-					speechBuffer = ""
-				block.responseText += text
+				speechBuffer += content_chunk
+				block.responseText += content_chunk
+				cut = _decide_speech_cut()
+				if cut > 0:
+					to_speak = speechBuffer[:cut]
+					speechBuffer = speechBuffer[cut:]
+					_emit_speech(to_speak)
 			if getattr(choice, "finish_reason", None):
 				break
 		if speechBuffer:
-			if hasattr(wnd, "canAutoReadStreamingResponse") and wnd.canAutoReadStreamingResponse():
-				speech_plain = _strip_markdown_for_speech(speechBuffer)
-				if speech_plain:
-					wnd.message(speech_plain, speechOnly=True, onPromptFieldOnly=False)
+			_emit_speech(speechBuffer)
+			speechBuffer = ""
 		if isinstance(latest_usage, dict) and latest_usage:
 			block.usage = {
 				"input_tokens": int(latest_usage.get("input_tokens", 0) or 0),
